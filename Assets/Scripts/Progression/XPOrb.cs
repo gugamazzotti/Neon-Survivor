@@ -10,10 +10,12 @@ namespace NeonSurvivor
 
         public const int XpValue = 10;
         public const float MagnetSpeed = 11f;
-        public const float DriftSpeed = 2.2f;
 
         int xpValue = XpValue;
         bool collected;
+        float trailTimer;
+        Vector3 baseScale;
+        bool scaleCached;
 
         public int Value => xpValue;
 
@@ -77,7 +79,10 @@ namespace NeonSurvivor
                 NeonVisuals.GlowMaterial,
                 new Vector3(0.42f, 0.42f, 1f),
                 8);
-            NeonFactory.Tint(go, NeonVisuals.Green);
+            if (NeonArt.Xp != null)
+                NeonArt.Apply(go, NeonArt.Xp);
+            else
+                NeonFactory.Tint(go, NeonVisuals.Green);
             NeonFactory.TrySetTag(go, "XP");
             go.AddComponent<XPOrb>();
             return go;
@@ -89,6 +94,42 @@ namespace NeonSurvivor
                 return;
 
             Tick(Time.deltaTime, PlayerController.Instance);
+            if (!collected)
+                Trail();
+        }
+
+        void Trail()
+        {
+            Bob();
+            PlayerController player = PlayerController.Instance;
+            if (player == null)
+                return;
+            if (!PulledBy(player.transform.position))
+                return;
+
+            trailTimer -= Time.deltaTime;
+            if (trailTimer > 0f)
+                return;
+
+            trailTimer = 0.05f;
+            Vector2 toPlayer = (Vector2)player.transform.position - (Vector2)transform.position;
+            if (toPlayer.sqrMagnitude < 0.0001f)
+                return;
+            SpaceFx.Spark(transform.position, -toPlayer.normalized * 1.8f, NeonVisuals.Green, 0.14f, 0.1f);
+        }
+
+        void Bob()
+        {
+            if (!scaleCached)
+            {
+                baseScale = transform.localScale;
+                if (baseScale.x < 0.05f)
+                    baseScale = new Vector3(0.42f, 0.42f, 1f);
+                scaleCached = true;
+            }
+
+            float pulse = 1f + Mathf.Sin(Time.time * 6.5f + transform.position.x * 2f) * 0.14f;
+            transform.localScale = baseScale * pulse;
         }
 
         public void Tick(float dt, PlayerController player)
@@ -101,15 +142,25 @@ namespace NeonSurvivor
             if (DistanceRules.IsCollect(pos, target))
             {
                 collected = true;
+                SpaceFx.Pickup(pos, xpValue);
                 if (GameManager.Instance != null)
                     GameManager.Instance.AddXP(xpValue);
                 NeonDespawn.Now(gameObject);
                 return;
             }
 
-            float speed = DistanceRules.IsWithin(pos, target, DistanceRules.MagnetRadius) ? MagnetSpeed : DriftSpeed;
-            Vector2 next = Vector2.MoveTowards(pos, target, speed * dt);
+            if (!PulledBy(target))
+                return;
+
+            Vector2 next = Vector2.MoveTowards(pos, target, MagnetSpeed * dt);
             transform.position = new Vector3(next.x, next.y, 0f);
+        }
+
+        bool PulledBy(Vector2 target)
+        {
+            if (XpMagnet.IsActive)
+                return true;
+            return DistanceRules.IsWithin(transform.position, target, DistanceRules.MagnetRadius);
         }
     }
 }

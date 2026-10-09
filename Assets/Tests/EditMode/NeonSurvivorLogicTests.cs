@@ -169,14 +169,14 @@ namespace NeonSurvivor.Tests
         }
 
         [Test]
-        public void Orb_DriftsThenMagnetizesThenCollects()
+        public void Orb_StaysUntilClose_MagnetPullsFromAnywhere()
         {
             GameManager gm = EnsureManager();
             PlayerController player = CreatePlayer(Vector3.zero);
 
             XPOrb far = CreateOrb(new Vector3(5f, 0f, 0f));
             far.Tick(0.1f, player);
-            Assert.AreEqual(5f - XPOrb.DriftSpeed * 0.1f, far.transform.position.x, 0.001f);
+            Assert.AreEqual(5f, far.transform.position.x, 0.001f);
             Assert.AreEqual(0, gm.CurrentXp);
 
             XPOrb near = CreateOrb(new Vector3(2f, 0f, 0f));
@@ -187,6 +187,18 @@ namespace NeonSurvivor.Tests
             close.Tick(0.01f, player);
             Assert.AreEqual(XPOrb.XpValue, gm.CurrentXp);
             Assert.IsFalse(gm.IsChoosingUpgrade);
+
+            XpMagnet.Activate();
+            far.Tick(0.1f, player);
+            Assert.AreEqual(5f - XPOrb.MagnetSpeed * 0.1f, far.transform.position.x, 0.001f);
+
+            MagnetPickup pickup = MagnetPickup.Spawn(new Vector3(0.3f, 0f, 0f));
+            created.Add(pickup.gameObject);
+            XpMagnet.Clear();
+            pickup.Tick(0.01f, player);
+            Assert.IsTrue(XpMagnet.IsActive);
+            XpMagnet.Tick(XpMagnet.Duration);
+            Assert.IsFalse(XpMagnet.IsActive);
         }
 
         [Test]

@@ -61,7 +61,7 @@ namespace NeonSurvivor
                 if (enemy == null || enemy.IsDying)
                     continue;
 
-                if (!DistanceRules.IsHit(transform.position, enemy.transform.position))
+                if (!enemy.Overlaps(transform.position))
                     continue;
 
                 enemy.TakeDamage(Damage);

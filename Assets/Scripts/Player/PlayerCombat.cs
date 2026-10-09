@@ -142,6 +142,7 @@ namespace NeonSurvivor
                     projectile.Launch(bulletSpeed);
             }
 
+            SpaceFx.Muzzle(transform.position + Quaternion.Euler(0f, 0f, baseAngle) * Vector3.up * 0.55f);
             return true;
         }
     }

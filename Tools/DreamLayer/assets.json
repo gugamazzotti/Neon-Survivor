@@ -1,0 +1,70 @@
+[
+  {
+    "name": "player-ship",
+    "prompt": "Top-down 2D game sprite of a small neon cyan triangular starfighter, sharp nose, two wing lights, glowing engine flame, flat vector, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "enemy-chaser",
+    "prompt": "Top-down 2D game sprite of a small hostile neon magenta triangle drone, angry and fast, flat vector, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "enemy-bruiser",
+    "prompt": "Top-down 2D game sprite of a chunky neon orange square brute drone, heavy armor plates, flat vector, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "enemy-tank",
+    "prompt": "Top-down 2D game sprite of a large neon violet circular tank drone, thick ring armor, flat vector, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "enemy-gunner",
+    "prompt": "Top-down 2D game sprite of a neon cyan diamond sniper drone with a small forward cannon, flat vector, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "enemy-weaver",
+    "prompt": "Top-down 2D game sprite of a slender neon yellow weaver drone, curved wings, flat vector, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "enemy-dasher",
+    "prompt": "Top-down 2D game sprite of a neon red dasher drone, long pointed body, motion streaks, flat vector, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "enemy-miniboss",
+    "prompt": "Top-down 2D game sprite of a large neon green circular mini-boss drone, armored core and orbiting plates, flat vector, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "enemy-boss",
+    "prompt": "Top-down 2D game sprite of a huge neon magenta diamond boss ship, menacing core, layered armor, flat vector, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "xp-orb",
+    "prompt": "2D game sprite of a small glowing neon green experience orb, soft round gem, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "magnet",
+    "prompt": "2D game sprite of a small glowing gold magnet pickup, horseshoe magnet made of neon light, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "projectile",
+    "prompt": "2D game sprite of a tiny neon yellow energy bolt, vertical, bright core, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "ui-button",
+    "aspect_ratio": "16:9",
+    "prompt": "Wide horizontal video-game UI button plate, empty center, no text, no letters, no numbers, no icons, neon cyan beveled frame with a dark charcoal interior, isolated on a pure black background"
+  },
+  {
+    "name": "ui-panel",
+    "aspect_ratio": "16:9",
+    "prompt": "Wide video-game menu card, empty center, no text, no letters, no numbers, neon cyan and magenta corner brackets, dark glass interior, isolated on a pure black background"
+  },
+  {
+    "name": "ui-bar",
+    "aspect_ratio": "16:9",
+    "prompt": "Long thin horizontal video-game status bar frame, empty inside, no text, no letters, no numbers, neon cyan housing, isolated on a pure black background"
+  },
+  {
+    "name": "ui-toast",
+    "aspect_ratio": "16:9",
+    "prompt": "Short horizontal video-game notification banner, empty center, no text, no letters, no numbers, gold and cyan neon frame, isolated on a pure black background"
+  }
+]

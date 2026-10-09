@@ -22,9 +22,15 @@ namespace NeonSurvivor
         public int CurrentXp { get; private set; }
         public int XpToLevel { get; private set; } = StartingXpToLevel;
         public int Level { get; private set; } = 1;
+        public int RunScore { get; private set; }
+        public int RunKills { get; private set; }
+        public float Elapsed { get; private set; }
+        public int UpgradeMask { get; private set; }
         public bool IsChoosingUpgrade { get; private set; }
         public bool IsGameOver { get; private set; }
         public UpgradeChoice[] PendingChoices { get; private set; }
+
+        bool survivalChecked;
 
         public static void ClearStatics()
         {
@@ -47,10 +53,29 @@ namespace NeonSurvivor
             CurrentXp = 0;
             XpToLevel = StartingXpToLevel;
             Level = 1;
+            RunScore = 0;
+            RunKills = 0;
+            Elapsed = 0f;
+            UpgradeMask = 0;
+            survivalChecked = false;
             IsChoosingUpgrade = false;
             IsGameOver = false;
             PendingChoices = null;
             Time.timeScale = 1f;
+            XpMagnet.Clear();
+        }
+
+        void Update()
+        {
+            if (!Application.isPlaying || IsGameOver || Time.timeScale <= 0f)
+                return;
+
+            Elapsed += Time.deltaTime;
+            if (!survivalChecked && Elapsed >= AchievementCatalog.SurviveSeconds)
+            {
+                survivalChecked = true;
+                AchievementCatalog.Evaluate(this);
+            }
         }
 
         public void AddXP(int amount)
@@ -63,12 +88,16 @@ namespace NeonSurvivor
                 return;
 
             CurrentXp += amount;
+            RunScore += amount;
+            AchievementCatalog.Evaluate(this);
             if (CurrentXp < XpToLevel)
                 return;
 
             IsChoosingUpgrade = true;
             PendingChoices = UpgradeManager.RollThree();
             Time.timeScale = 0f;
+            if (player != null)
+                SpaceFx.LevelUp(player.transform.position);
         }
 
         public void CompleteUpgrade()
@@ -82,6 +111,20 @@ namespace NeonSurvivor
             XpToLevel *= 2;
             Level += 1;
             Time.timeScale = 1f;
+            AchievementCatalog.Evaluate(this);
+        }
+
+        public void RegisterKill()
+        {
+            RunKills++;
+            SaveProfile.AddLifetimeKill();
+            AchievementCatalog.Evaluate(this);
+        }
+
+        public void RegisterUpgrade(UpgradeType type)
+        {
+            UpgradeMask |= 1 << (int)type;
+            AchievementCatalog.Evaluate(this);
         }
 
         public void NotifyPlayerDied()
@@ -93,6 +136,7 @@ namespace NeonSurvivor
             IsChoosingUpgrade = false;
             PendingChoices = null;
             Time.timeScale = 0f;
+            AchievementCatalog.Evaluate(this);
         }
 
         public void Restart()

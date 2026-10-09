@@ -1,4 +1,6 @@
+using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace NeonSurvivor
 {
@@ -12,9 +14,15 @@ namespace NeonSurvivor
         [SerializeField] Sprite squareSprite;
         [SerializeField] Sprite circleSprite;
 
+        bool bootStarted;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void EnsureOnPlay()
         {
+            Scene scene = SceneManager.GetActiveScene();
+            if (GameSession.IsMenuScene(scene.name) || FindObjectOfType<MainMenuController>() != null)
+                return;
+
             GameBootstrap bootstrap = FindObjectOfType<GameBootstrap>();
             if (bootstrap == null)
             {
@@ -22,14 +30,31 @@ namespace NeonSurvivor
                 bootstrap = go.AddComponent<GameBootstrap>();
             }
 
-            bootstrap.BringUp();
+            bootstrap.BeginBoot();
         }
 
         void Awake()
         {
             if (!Application.isPlaying)
                 return;
+            if (GameSession.IsMenuScene(gameObject.scene.name))
+                return;
 
+            BeginBoot();
+        }
+
+        public void BeginBoot()
+        {
+            if (bootStarted)
+                return;
+
+            bootStarted = true;
+            StartCoroutine(Boot());
+        }
+
+        IEnumerator Boot()
+        {
+            yield return NeonArt.Preload();
             BringUp();
         }
 
@@ -54,18 +79,17 @@ namespace NeonSurvivor
             }
 
             cam.orthographic = true;
-            if (cam.orthographicSize < 1f)
-                cam.orthographicSize = 5f;
+            cam.orthographicSize = 21f;
             cam.transform.position = new Vector3(cam.transform.position.x, cam.transform.position.y, -10f);
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = NeonVisuals.Background;
+            cam.backgroundColor = MapCatalog.Current.Background;
             cam.allowHDR = true;
             cam.allowMSAA = false;
 
             if (cam.GetComponent<CameraController>() == null)
                 cam.gameObject.AddComponent<CameraController>();
 
-            NeonFactory.AttachStarfield(cam.transform);
+            NeonFactory.PlaceWorldBackdrop(cam, MapCatalog.Current.StarTint);
         }
 
         void EnsureManagers()
@@ -117,17 +141,28 @@ namespace NeonSurvivor
                     NeonVisuals.GlowMaterial,
                     new Vector3(0.8f, 0.8f, 1f),
                     20);
-                NeonFactory.Tint(go, NeonVisuals.Cyan);
+                if (NeonArt.Player != null)
+                    NeonArt.Apply(go, NeonArt.Player);
+                else
+                    NeonFactory.Tint(go, NeonVisuals.Cyan);
                 NeonFactory.TrySetTag(go, "Player");
                 go.transform.position = Vector3.zero;
                 player = go.AddComponent<PlayerController>();
                 combat = go.AddComponent<PlayerCombat>();
+                go.AddComponent<PlayerPowers>();
+                go.AddComponent<ShipThruster>();
             }
             else
             {
                 combat = player.GetComponent<PlayerCombat>();
                 if (combat == null)
                     combat = player.gameObject.AddComponent<PlayerCombat>();
+                if (player.GetComponent<PlayerPowers>() == null)
+                    player.gameObject.AddComponent<PlayerPowers>();
+                if (player.GetComponent<ShipThruster>() == null)
+                    player.gameObject.AddComponent<ShipThruster>();
+                if (NeonArt.Player != null)
+                    NeonArt.Apply(player.gameObject, NeonArt.Player);
             }
 
             if (combat != null)
@@ -181,7 +216,24 @@ namespace NeonSurvivor
                 NeonVisuals.GlowMaterial,
                 new Vector3(0.22f, 0.5f, 1f),
                 12);
-            NeonFactory.Tint(go, NeonVisuals.Yellow);
+            if (NeonArt.Projectile != null)
+            {
+                NeonArt.Apply(go, NeonArt.Projectile);
+                go.transform.localScale = new Vector3(0.38f, 0.38f, 1f);
+            }
+            else
+                NeonFactory.Tint(go, NeonVisuals.Yellow);
+            GameObject trail = new GameObject("Trail");
+            trail.transform.SetParent(go.transform, false);
+            trail.transform.localPosition = new Vector3(0f, -0.85f, 0f);
+            trail.transform.localScale = new Vector3(0.55f, 1.7f, 1f);
+            SpriteRenderer trailRenderer = trail.AddComponent<SpriteRenderer>();
+            trailRenderer.sprite = NeonVisuals.Orb;
+            trailRenderer.sharedMaterial = NeonVisuals.GlowMaterial;
+            trailRenderer.sortingOrder = 11;
+            trailRenderer.color = new Color(1.4f, 1.05f, 0.35f, 0.45f);
+            if (NeonArt.Projectile != null)
+                trail.SetActive(false);
             go.AddComponent<Projectile>();
             return go;
         }
@@ -195,7 +247,10 @@ namespace NeonSurvivor
                 NeonVisuals.GlowMaterial,
                 new Vector3(0.42f, 0.42f, 1f),
                 8);
-            NeonFactory.Tint(go, NeonVisuals.Green);
+            if (NeonArt.Xp != null)
+                NeonArt.Apply(go, NeonArt.Xp);
+            else
+                NeonFactory.Tint(go, NeonVisuals.Green);
             NeonFactory.TrySetTag(go, "XP");
             go.AddComponent<XPOrb>();
             return go;

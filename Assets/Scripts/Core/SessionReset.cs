@@ -14,6 +14,9 @@ namespace NeonSurvivor
             Enemy.ClearRegistry();
             XPOrb.ClearRegistry();
             NeonVisuals.ClearRuntimeCache();
+            SpaceFx.ClearStatics();
+            XpMagnet.ClearStatics();
+            GameSession.MapIndex = 0;
             Time.timeScale = 1f;
         }
 
@@ -21,6 +24,7 @@ namespace NeonSurvivor
         static void ResetClock()
         {
             Time.timeScale = 1f;
+            Loc.Ensure();
         }
     }
 }

@@ -18,8 +18,11 @@ namespace NeonSurvivor
         static Sprite triangle;
         static Sprite square;
         static Sprite circle;
+        static Sprite diamond;
         static Sprite orb;
         static Sprite stars;
+        static Sprite brightStars;
+        static Sprite grid;
         static Sprite white;
         static Material bodyMaterial;
         static Material glowMaterial;
@@ -27,8 +30,47 @@ namespace NeonSurvivor
         public static Sprite Triangle => triangle != null ? triangle : triangle = MakeSprite(TriangleTexture(TexSize));
         public static Sprite Square => square != null ? square : square = MakeSprite(SquareTexture(TexSize));
         public static Sprite Circle => circle != null ? circle : circle = MakeSprite(CircleTexture(TexSize, false));
+        public static Sprite Diamond => diamond != null ? diamond : diamond = MakeSprite(DiamondTexture(TexSize));
         public static Sprite Orb => orb != null ? orb : orb = MakeSprite(CircleTexture(TexSize, true));
-        public static Sprite Stars => stars != null ? stars : stars = MakeSprite(StarTexture(256));
+        public static Sprite Stars
+        {
+            get
+            {
+                if (stars != null)
+                    return stars;
+                Texture2D tex = StarTexture(256);
+                tex.wrapMode = TextureWrapMode.Repeat;
+                stars = MakeFullRect(tex);
+                return stars;
+            }
+        }
+
+        public static Sprite BrightStars
+        {
+            get
+            {
+                if (brightStars != null)
+                    return brightStars;
+                Texture2D tex = BrightStarTexture(128);
+                tex.wrapMode = TextureWrapMode.Repeat;
+                brightStars = MakeFullRect(tex);
+                return brightStars;
+            }
+        }
+
+        public static Sprite Grid
+        {
+            get
+            {
+                if (grid != null)
+                    return grid;
+                Texture2D tex = GridTexture(64);
+                tex.wrapMode = TextureWrapMode.Repeat;
+                tex.filterMode = FilterMode.Point;
+                grid = MakeFullRect(tex, 16f);
+                return grid;
+            }
+        }
 
         public static Sprite White
         {
@@ -57,8 +99,11 @@ namespace NeonSurvivor
             triangle = null;
             square = null;
             circle = null;
+            diamond = null;
             orb = null;
             stars = null;
+            brightStars = null;
+            grid = null;
             white = null;
             bodyMaterial = null;
             glowMaterial = null;
@@ -99,6 +144,28 @@ namespace NeonSurvivor
             });
         }
 
+        public static Texture2D GridTexture(int size)
+        {
+            Texture2D tex = Paint(size, delegate (int x, int y)
+            {
+                return x < 2 || y < 2 ? 1f : 0f;
+            });
+            tex.wrapMode = TextureWrapMode.Repeat;
+            return tex;
+        }
+
+        public static Texture2D DiamondTexture(int size)
+        {
+            Vector2 center = new Vector2(size * 0.5f, size * 0.5f);
+            float radius = size * 0.5f - 3f;
+            return Paint(size, delegate (int x, int y)
+            {
+                float dx = Mathf.Abs(x + 0.5f - center.x);
+                float dy = Mathf.Abs(y + 0.5f - center.y);
+                return dx / radius + dy / radius <= 1f ? 1f : 0f;
+            });
+        }
+
         public static Texture2D StarTexture(int size)
         {
             Random.State state = Random.state;
@@ -115,6 +182,39 @@ namespace NeonSurvivor
             }
             tex.Apply();
             Random.state = state;
+            return tex;
+        }
+
+        public static Texture2D BrightStarTexture(int size)
+        {
+            Random.State state = Random.state;
+            Random.InitState(9041);
+            Texture2D tex = NewTexture(size);
+            Color[] clear = new Color[size * size];
+            tex.SetPixels(clear);
+            int count = Mathf.Max(8, size / 4);
+            for (int i = 0; i < count; i++)
+            {
+                int x = Random.Range(2, size - 2);
+                int y = Random.Range(2, size - 2);
+                float value = Random.Range(0.82f, 1f);
+                int radius = Random.value > 0.8f ? 2 : 1;
+                for (int oy = -radius; oy <= radius; oy++)
+                {
+                    for (int ox = -radius; ox <= radius; ox++)
+                    {
+                        float distance = Mathf.Sqrt(ox * ox + oy * oy) / (radius + 0.15f);
+                        if (distance > 1f)
+                            continue;
+                        float alpha = (1f - distance) * Random.Range(0.65f, 1f);
+                        tex.SetPixel(x + ox, y + oy, new Color(value, value, 1f, alpha));
+                    }
+                }
+            }
+
+            tex.Apply();
+            Random.state = state;
+            tex.wrapMode = TextureWrapMode.Repeat;
             return tex;
         }
 
@@ -135,6 +235,22 @@ namespace NeonSurvivor
         public static Sprite MakeSprite(Texture2D texture)
         {
             return Sprite.Create(texture, new Rect(0f, 0f, texture.width, texture.height), new Vector2(0.5f, 0.5f), PixelsPerUnit);
+        }
+
+        public static Sprite MakeFullRect(Texture2D texture)
+        {
+            return MakeFullRect(texture, PixelsPerUnit);
+        }
+
+        public static Sprite MakeFullRect(Texture2D texture, float pixelsPerUnit)
+        {
+            return Sprite.Create(
+                texture,
+                new Rect(0f, 0f, texture.width, texture.height),
+                new Vector2(0.5f, 0.5f),
+                pixelsPerUnit,
+                0u,
+                SpriteMeshType.FullRect);
         }
 
         static Texture2D Paint(int size, System.Func<int, int, float> alphaAt)

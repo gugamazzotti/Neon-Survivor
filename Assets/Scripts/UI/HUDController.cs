@@ -15,6 +15,13 @@ namespace NeonSurvivor
         [SerializeField] Button[] upgradeButtons;
         [SerializeField] GameObject gameOverPanel;
         [SerializeField] Button restartButton;
+        [SerializeField] Button menuButton;
+        [SerializeField] Text scoreText;
+        [SerializeField] Text gameOverDetail;
+        [SerializeField] Text toastText;
+        GameObject toastRoot;
+
+        float toastTimer;
 
         public void EnsureUi()
         {
@@ -25,9 +32,15 @@ namespace NeonSurvivor
 
         void OnEnable()
         {
+            AchievementCatalog.Unlocked += ShowToast;
             if (!Application.isPlaying)
                 return;
             Wire();
+        }
+
+        void OnDisable()
+        {
+            AchievementCatalog.Unlocked -= ShowToast;
         }
 
         void Update()
@@ -41,7 +54,23 @@ namespace NeonSurvivor
             bool choosing = gm != null && gm.IsChoosingUpgrade && !gameOver;
 
             if (gameOverPanel != null && gameOverPanel.activeSelf != gameOver)
+            {
                 gameOverPanel.SetActive(gameOver);
+                if (gameOver && gameOverDetail != null && gm != null)
+                    gameOverDetail.text = Loc.Get("gameover.sub") + "\n" + Loc.Format("gameover.score", gm.RunScore);
+            }
+
+            if (toastTimer > 0f)
+            {
+                toastTimer -= Time.unscaledDeltaTime;
+                if (toastTimer <= 0f)
+                {
+                    if (toastRoot != null)
+                        toastRoot.SetActive(false);
+                    else if (toastText != null)
+                        toastText.gameObject.SetActive(false);
+                }
+            }
 
             if (levelUpPanel.activeSelf != choosing)
             {
@@ -72,6 +101,24 @@ namespace NeonSurvivor
                 GameManager.Instance.Restart();
         }
 
+        public void OpenMenu()
+        {
+            GameSession.OpenMenu();
+        }
+
+        public void ShowToast(string message)
+        {
+            if (toastText == null)
+                return;
+
+            if (toastRoot != null)
+                toastRoot.SetActive(true);
+            else
+                toastText.gameObject.SetActive(true);
+            toastText.text = message;
+            toastTimer = 3.2f;
+        }
+
         void Pick(int index)
         {
             GameManager gm = GameManager.Instance;
@@ -95,6 +142,8 @@ namespace NeonSurvivor
             Bind(upgradeButtons[2], Pick2);
             if (restartButton != null)
                 Bind(restartButton, Restart);
+            if (menuButton != null)
+                Bind(menuButton, OpenMenu);
         }
 
         static void Bind(Button button, UnityEngine.Events.UnityAction action)
@@ -110,13 +159,21 @@ namespace NeonSurvivor
             if (healthFill != null)
                 healthFill.fillAmount = player == null ? 0f : (float)player.Health / PlayerController.MaxHealth;
             if (levelText != null)
-                levelText.text = "NV " + (gm == null ? 1 : gm.Level);
+                levelText.text = Loc.Format("hud.level", gm == null ? 1 : gm.Level);
             if (gm == null)
                 return;
             if (xpFill != null)
                 xpFill.fillAmount = gm.XpToLevel <= 0 ? 0f : (float)gm.CurrentXp / gm.XpToLevel;
             if (xpText != null)
-                xpText.text = "XP " + gm.CurrentXp + "/" + gm.XpToLevel;
+                xpText.text = Loc.Format("hud.xp", gm.CurrentXp, gm.XpToLevel);
+            if (scoreText != null)
+            {
+                string score = Loc.Format("hud.score", gm.RunScore);
+                int nextMap = GameSession.MapIndex + 1;
+                if (nextMap < MapCatalog.Count)
+                    score += " / " + MapCatalog.Maps[nextMap].RequiredScore;
+                scoreText.text = Loc.Get(MapCatalog.Current.NameKey) + "   " + score;
+            }
         }
 
         void ApplyLabels(UpgradeChoice[] choices)
@@ -124,9 +181,12 @@ namespace NeonSurvivor
             if (choices == null || upgradeLabels == null)
                 return;
 
-            for (int i = 0; i < upgradeLabels.Length && i < choices.Length; i++)
+            for (int i = 0; i < upgradeLabels.Length; i++)
             {
-                if (upgradeLabels[i] == null)
+                bool show = i < choices.Length;
+                if (upgradeButtons != null && i < upgradeButtons.Length && upgradeButtons[i] != null)
+                    upgradeButtons[i].gameObject.SetActive(show);
+                if (!show || upgradeLabels[i] == null)
                     continue;
                 upgradeLabels[i].text = choices[i].Title + "\n" + choices[i].Description;
             }
@@ -137,6 +197,7 @@ namespace NeonSurvivor
             if (levelUpPanel != null)
                 return;
 
+            Loc.Ensure();
             Font font = BuiltinFont();
             Canvas canvas = gameObject.GetComponent<Canvas>();
             if (canvas == null)
@@ -148,43 +209,94 @@ namespace NeonSurvivor
             if (scaler == null)
                 scaler = gameObject.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
+            scaler.referenceResolution = new Vector2(1080f, 2100f);
+            scaler.matchWidthOrHeight = 0f;
 
             if (gameObject.GetComponent<GraphicRaycaster>() == null)
                 gameObject.AddComponent<GraphicRaycaster>();
 
             EnsureEventSystem();
 
-            Text title = CreateText("Title", transform, font, 28, FontStyle.Bold, new Color(0.55f, 1f, 1f, 0.9f), TextAnchor.UpperLeft);
-            Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(36f, -24f), new Vector2(520f, 36f));
+            GameObject plateGo = new GameObject("HudPlate", typeof(RectTransform));
+            plateGo.transform.SetParent(transform, false);
+            Image plate = plateGo.AddComponent<Image>();
+            plate.raycastTarget = false;
+            if (NeonArt.Panel != null)
+                NeonArt.Paint(plate, NeonArt.Panel, true);
+            else
+            {
+                plate.sprite = NeonVisuals.White;
+                plate.color = new Color(0.02f, 0.04f, 0.08f, 0.72f);
+            }
+
+            Place(plate.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -16f), new Vector2(1032f, 530f));
+
+            RectTransform well = new GameObject("Well", typeof(RectTransform)).GetComponent<RectTransform>();
+            well.SetParent(plateGo.transform, false);
+            well.anchorMin = Vector2.zero;
+            well.anchorMax = Vector2.one;
+            well.offsetMin = new Vector2(118f, 108f);
+            well.offsetMax = new Vector2(-118f, -116f);
+
+            Text title = CreateText("Title", well, font, 28, FontStyle.Bold, new Color(0.55f, 1f, 1f, 0.9f), TextAnchor.UpperLeft);
+            Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -2f), new Vector2(760f, 36f));
             title.text = "NEON SURVIVOR";
 
-            levelText = CreateText("Level", transform, font, 32, FontStyle.Bold, Color.white, TextAnchor.UpperLeft);
-            Place(levelText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(36f, -64f), new Vector2(280f, 40f));
+            levelText = CreateText("Level", well, font, 30, FontStyle.Bold, Color.white, TextAnchor.UpperLeft);
+            Place(levelText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -40f), new Vector2(760f, 36f));
 
-            healthFill = CreateBar(transform, "Health", new Vector2(36f, -114f), new Vector2(460f, 22f), new Color(1f, 0.28f, 0.48f, 1f));
-            xpFill = CreateBar(transform, "XP", new Vector2(36f, -146f), new Vector2(460f, 14f), new Color(0.25f, 0.95f, 1f, 1f));
+            healthFill = CreateBar(well, "Health", new Vector2(8f, -86f), new Vector2(760f, 52f), new Color(1f, 0.28f, 0.48f, 1f));
+            xpFill = CreateBar(well, "XP", new Vector2(8f, -148f), new Vector2(760f, 44f), new Color(0.25f, 0.95f, 1f, 1f));
 
-            xpText = CreateText("XpLabel", transform, font, 20, FontStyle.Normal, new Color(0.75f, 0.95f, 1f, 0.9f), TextAnchor.UpperLeft);
-            Place(xpText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(36f, -166f), new Vector2(460f, 28f));
+            xpText = CreateText("XpLabel", well, font, 20, FontStyle.Normal, new Color(0.75f, 0.95f, 1f, 0.9f), TextAnchor.UpperLeft);
+            Place(xpText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -198f), new Vector2(760f, 28f));
+
+            scoreText = CreateText("Score", well, font, 22, FontStyle.Bold, new Color(0.95f, 0.85f, 0.45f, 0.95f), TextAnchor.UpperLeft);
+            Place(scoreText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -228f), new Vector2(760f, 32f));
+
+            toastRoot = new GameObject("Toast", typeof(RectTransform));
+            toastRoot.transform.SetParent(transform, false);
+            Image toastImage = toastRoot.AddComponent<Image>();
+            toastImage.raycastTarget = false;
+            if (NeonArt.Toast != null)
+                NeonArt.Paint(toastImage, NeonArt.Toast, true);
+            else
+            {
+                toastImage.sprite = NeonVisuals.White;
+                toastImage.color = new Color(0.03f, 0.07f, 0.09f, 0.88f);
+            }
+
+            Place(toastImage.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 48f), new Vector2(960f, 168f));
+            toastText = CreateText("Label", toastRoot.transform, font, 26, FontStyle.Bold, new Color(0.7f, 1f, 0.85f, 1f), TextAnchor.MiddleCenter);
+            RectTransform toastLabel = toastText.rectTransform;
+            toastLabel.anchorMin = Vector2.zero;
+            toastLabel.anchorMax = Vector2.one;
+            toastLabel.offsetMin = new Vector2(72f, 46f);
+            toastLabel.offsetMax = new Vector2(-72f, -46f);
+            toastRoot.SetActive(false);
 
             levelUpPanel = CreateModal(
                 "LevelUp",
                 font,
-                "Nível alcançado",
-                "Escolha uma melhoria",
+                Loc.Get("levelup.title"),
+                Loc.Get("levelup.sub"),
                 out upgradeButtons,
                 out upgradeLabels);
             levelUpPanel.SetActive(false);
 
             Button[] ignoredButtons;
             Text[] ignoredLabels;
-            gameOverPanel = CreateModal("GameOver", font, "Sinal perdido", "A nave foi destruída", out ignoredButtons, out ignoredLabels);
+            gameOverPanel = CreateModal("GameOver", font, Loc.Get("gameover.title"), Loc.Get("gameover.sub"), out ignoredButtons, out ignoredLabels);
             restartButton = ignoredButtons[0];
-            restartButton.GetComponentInChildren<Text>().text = "Jogar de novo";
-            ignoredButtons[1].gameObject.SetActive(false);
+            menuButton = ignoredButtons[1];
+            restartButton.GetComponentInChildren<Text>().text = Loc.Get("gameover.retry");
+            menuButton.GetComponentInChildren<Text>().text = Loc.Get("gameover.menu");
             ignoredButtons[2].gameObject.SetActive(false);
+            restartButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -620f);
+            menuButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -860f);
+            gameOverDetail = gameOverPanel.transform.Find("Card/Subtitle").GetComponent<Text>();
+            gameOverDetail.horizontalOverflow = HorizontalWrapMode.Wrap;
+            gameOverDetail.rectTransform.sizeDelta = new Vector2(700f, 110f);
             gameOverPanel.SetActive(false);
         }
 
@@ -206,25 +318,30 @@ namespace NeonSurvivor
             GameObject card = new GameObject("Card", typeof(RectTransform));
             card.transform.SetParent(panel.transform, false);
             Image cardImage = card.AddComponent<Image>();
-            cardImage.sprite = NeonVisuals.White;
-            cardImage.color = new Color(0.03f, 0.05f, 0.1f, 0.96f);
-            Place(card.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(820f, 640f));
+            if (NeonArt.Panel != null)
+                NeonArt.Paint(cardImage, NeonArt.Panel, true);
+            else
+            {
+                cardImage.sprite = NeonVisuals.White;
+                cardImage.color = new Color(0.03f, 0.05f, 0.1f, 0.96f);
+            }
+            Place(card.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(960f, 1120f));
 
             Text title = CreateText("Heading", card.transform, font, 48, FontStyle.Bold, new Color(0.6f, 1f, 1f, 1f), TextAnchor.MiddleCenter);
-            Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(740f, 70f));
+            Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -140f), new Vector2(700f, 72f));
             title.text = heading;
 
             Text sub = CreateText("Subtitle", card.transform, font, 24, FontStyle.Normal, new Color(0.8f, 0.9f, 1f, 0.85f), TextAnchor.MiddleCenter);
-            Place(sub.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -130f), new Vector2(740f, 40f));
+            Place(sub.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -220f), new Vector2(700f, 64f));
             sub.text = subtitle;
 
             buttons = new Button[3];
             labels = new Text[3];
-            float[] y = { -230f, -360f, -490f };
+            float[] y = { -380f, -620f, -860f };
             for (int i = 0; i < 3; i++)
             {
                 buttons[i] = CreateButton(card.transform, "Choice" + i, font, out labels[i]);
-                Place(buttons[i].GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, y[i]), new Vector2(700f, 110f));
+                Place(buttons[i].GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, y[i]), new Vector2(700f, 200f));
             }
 
             return panel;
@@ -246,6 +363,7 @@ namespace NeonSurvivor
             colors.selectedColor = colors.highlightedColor;
             colors.fadeDuration = 0.05f;
             button.colors = colors;
+            NeonArt.PaintButton(button);
             Navigation navigation = button.navigation;
             navigation.mode = Navigation.Mode.None;
             button.navigation = navigation;
@@ -254,9 +372,11 @@ namespace NeonSurvivor
             RectTransform labelRect = label.rectTransform;
             labelRect.anchorMin = Vector2.zero;
             labelRect.anchorMax = Vector2.one;
-            labelRect.offsetMin = new Vector2(16f, 8f);
-            labelRect.offsetMax = new Vector2(-16f, -8f);
-            label.text = "Melhoria";
+            labelRect.offsetMin = new Vector2(150f, 70f);
+            labelRect.offsetMax = new Vector2(-150f, -70f);
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+            label.text = Loc.Get("upgrade.placeholder");
             return button;
         }
 
@@ -268,6 +388,9 @@ namespace NeonSurvivor
             bg.sprite = NeonVisuals.White;
             bg.color = new Color(1f, 1f, 1f, 0.12f);
             bg.raycastTarget = false;
+            if (NeonArt.Bar != null)
+                NeonArt.Paint(bg, NeonArt.Bar, true);
+
             Place(bg.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), position, size);
 
             GameObject fillGo = new GameObject(name + "Fill", typeof(RectTransform));
@@ -283,8 +406,8 @@ namespace NeonSurvivor
             RectTransform fillRect = fill.rectTransform;
             fillRect.anchorMin = Vector2.zero;
             fillRect.anchorMax = Vector2.one;
-            fillRect.offsetMin = Vector2.zero;
-            fillRect.offsetMax = Vector2.zero;
+            fillRect.offsetMin = NeonArt.Bar != null ? new Vector2(36f, 16f) : Vector2.zero;
+            fillRect.offsetMax = NeonArt.Bar != null ? new Vector2(-36f, -16f) : Vector2.zero;
             return fill;
         }
 

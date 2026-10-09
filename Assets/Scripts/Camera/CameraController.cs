@@ -24,6 +24,7 @@ namespace NeonSurvivor
         Vector3 shakeOffset;
         float shakeMagnitude;
         float shakeTime;
+        float shakeDuration = 0.16f;
 
         public static void ClearStatics()
         {
@@ -56,10 +57,14 @@ namespace NeonSurvivor
 
             if (shakeTime > 0f)
             {
-                shakeTime -= Time.deltaTime;
-                shakeOffset = (Vector3)(Random.insideUnitCircle * shakeMagnitude);
+                shakeTime -= Time.unscaledDeltaTime;
+                float damp = shakeDuration <= 0.001f ? 0f : Mathf.Clamp01(shakeTime / shakeDuration);
+                shakeOffset = (Vector3)(Random.insideUnitCircle * shakeMagnitude * damp);
                 if (shakeTime <= 0f)
+                {
                     shakeOffset = Vector3.zero;
+                    shakeMagnitude = 0f;
+                }
             }
 
             transform.position = basePosition + shakeOffset;
@@ -74,7 +79,8 @@ namespace NeonSurvivor
         public void Shake(float amount)
         {
             shakeMagnitude = Mathf.Max(shakeMagnitude, amount);
-            shakeTime = Mathf.Max(shakeTime, 0.14f);
+            shakeDuration = 0.16f;
+            shakeTime = shakeDuration;
         }
     }
 }

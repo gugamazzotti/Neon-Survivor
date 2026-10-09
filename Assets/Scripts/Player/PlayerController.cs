@@ -59,13 +59,30 @@ namespace NeonSurvivor
             if (IsDead || IsInvulnerable || amount <= 0)
                 return;
 
+            PlayerPowers powers = GetComponent<PlayerPowers>();
+            if (powers != null && powers.TryAbsorbHit())
+            {
+                invulnTimer = 0.2f;
+                SpaceFx.Shield(transform.position);
+                if (CameraController.Instance != null)
+                    CameraController.Instance.Shake(0.1f);
+                return;
+            }
+
             health = Mathf.Max(0, health - amount);
             invulnTimer = InvulnDuration;
             if (CameraController.Instance != null)
-                CameraController.Instance.Shake(0.22f);
+                CameraController.Instance.Shake(health <= 0 ? 0.32f : 0.22f);
 
-            if (health <= 0 && GameManager.Instance != null)
-                GameManager.Instance.NotifyPlayerDied();
+            if (health <= 0)
+            {
+                SpaceFx.PlayerDown(transform.position);
+                if (GameManager.Instance != null)
+                    GameManager.Instance.NotifyPlayerDied();
+                return;
+            }
+
+            SpaceFx.PlayerHurt(transform.position);
         }
 
         void Update()

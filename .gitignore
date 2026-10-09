@@ -107,3 +107,7 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# DreamLayer API key and per-job journals. Generated PNGs under Assets/Art stay tracked.
+/Tools/DreamLayer/secrets.env
+/Tools/DreamLayer/jobs/

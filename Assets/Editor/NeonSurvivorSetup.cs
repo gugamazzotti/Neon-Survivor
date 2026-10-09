@@ -8,9 +8,16 @@ using UnityEngine.SceneManagement;
 
 namespace NeonSurvivor.EditorTools
 {
+    [InitializeOnLoad]
     public static class NeonSurvivorSetup
     {
         const string ScenePath = "Assets/Scenes/SampleScene.unity";
+        const string MenuPath = "Assets/Scenes/MainMenu.unity";
+
+        static NeonSurvivorSetup()
+        {
+            EditorApplication.delayCall += PinPlayModeStart;
+        }
 
         [MenuItem("Neon Survivor/Montar Cena")]
         public static void BuildScene()
@@ -96,24 +103,79 @@ namespace NeonSurvivor.EditorTools
             TryAddBloom(cam);
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene);
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            EnsureMenuScene();
+            EditorBuildSettings.scenes = new[]
+            {
+                new EditorBuildSettingsScene(MenuPath, true),
+                new EditorBuildSettingsScene(ScenePath, true)
+            };
+            PinPlayModeStart();
             PlayerSettings.productName = "Neon Survivor";
             AssetDatabase.SaveAssets();
-            Debug.Log("Neon Survivor: cena montada. Abra SampleScene e aperte Play.");
+            Debug.Log("Neon Survivor: cenas montadas. O Play abre o menu inicial.");
 
             if (!Application.isBatchMode)
             {
                 EditorUtility.DisplayDialog(
                     "Neon Survivor",
-                    "Cena montada. Abra Assets/Scenes/SampleScene e aperte Play.\n\nSegure o botão esquerdo do mouse para mover a nave.",
+                    "Cenas montadas. Aperte Play para abrir o menu inicial.\n\nJogar escolhe o mapa. Segure o mouse para voar.",
                     "OK");
             }
+        }
+
+        static void PinPlayModeStart()
+        {
+            SceneAsset menuAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(MenuPath);
+            if (menuAsset != null)
+                EditorSceneManager.playModeStartScene = menuAsset;
+        }
+
+        static void EnsureMenuScene()
+        {
+            Scene game = EditorSceneManager.GetActiveScene();
+            Scene menu = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Additive);
+            EditorSceneManager.SetActiveScene(menu);
+
+            GameObject[] roots = menu.GetRootGameObjects();
+            Camera cam = null;
+            for (int i = 0; i < roots.Length; i++)
+            {
+                Camera found = roots[i].GetComponent<Camera>();
+                if (found != null)
+                {
+                    cam = found;
+                    continue;
+                }
+
+                Object.DestroyImmediate(roots[i]);
+            }
+
+            if (cam == null)
+            {
+                GameObject cameraGo = new GameObject("Main Camera");
+                cameraGo.tag = "MainCamera";
+                cam = cameraGo.AddComponent<Camera>();
+                cameraGo.AddComponent<AudioListener>();
+            }
+
+            cam.orthographic = true;
+            cam.orthographicSize = 21f;
+            cam.transform.position = new Vector3(0f, 0f, -10f);
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = NeonVisuals.Background;
+            cam.allowHDR = true;
+
+            GameObject menuGo = new GameObject("MainMenu");
+            menuGo.AddComponent<MainMenuController>();
+            EditorSceneManager.SaveScene(menu, MenuPath);
+            EditorSceneManager.SetActiveScene(game);
+            EditorSceneManager.CloseScene(menu, true);
         }
 
         static void ConfigureCamera(Camera cam, Sprite stars, Material starMaterial)
         {
             cam.orthographic = true;
-            cam.orthographicSize = 5f;
+            cam.orthographicSize = 21f;
             cam.transform.position = new Vector3(0f, 0f, -10f);
             cam.transform.rotation = Quaternion.identity;
             cam.clearFlags = CameraClearFlags.SolidColor;
@@ -131,8 +193,8 @@ namespace NeonSurvivor.EditorTools
             cam.gameObject.AddComponent<CameraController>();
 
             GameObject starGo = new GameObject("Starfield");
-            starGo.transform.SetParent(cam.transform, false);
-            starGo.transform.localPosition = new Vector3(0f, 0f, 10f);
+            starGo.transform.SetParent(null, true);
+            starGo.transform.position = Vector3.zero;
             starGo.transform.localScale = new Vector3(42f, 42f, 1f);
             SpriteRenderer renderer = starGo.AddComponent<SpriteRenderer>();
             renderer.sprite = stars;

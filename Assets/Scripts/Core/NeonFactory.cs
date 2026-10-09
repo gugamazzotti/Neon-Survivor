@@ -52,23 +52,54 @@ namespace NeonSurvivor
                 glowRenderer.color = new Color(color.r, color.g, color.b, 0.4f);
         }
 
-        public static void AttachStarfield(Transform cameraTransform)
+        public static void PlaceWorldBackdrop(Camera cam, Color starTint)
         {
-            if (cameraTransform.Find("Starfield") != null)
+            if (cam == null)
                 return;
 
-            GameObject go = new GameObject("Starfield");
-            go.transform.SetParent(cameraTransform, false);
-            go.transform.localPosition = new Vector3(0f, 0f, 10f);
-            go.transform.localScale = new Vector3(42f, 42f, 1f);
+            float span = BackdropSpan(cam);
+            PrepareBackdrop("Starfield", cam.transform, NeonVisuals.Stars, -50, starTint, span);
+            Color bright = new Color(starTint.r * 1.25f, starTint.g * 1.25f, Mathf.Min(2.2f, starTint.b * 1.45f), 0.95f);
+            PrepareBackdrop("StarBright", cam.transform, NeonVisuals.BrightStars, -47, bright, span);
+            PrepareBackdrop("WorldGrid", null, NeonVisuals.Grid, -40, new Color(0.35f, 0.9f, 1f, 0.1f), span);
+            SpaceAmbience.Ensure(cam, starTint);
+        }
 
-            SpriteRenderer renderer = go.AddComponent<SpriteRenderer>();
-            renderer.sprite = NeonVisuals.Stars;
-            renderer.sortingOrder = -50;
-            renderer.color = new Color(0.8f, 0.9f, 1f, 0.9f);
+        static float BackdropSpan(Camera cam)
+        {
+            float height = cam.orthographic ? cam.orthographicSize * 2f : 10f;
+            return Mathf.Clamp(height * 14f, 160f, 240f);
+        }
+
+        static SpriteRenderer PrepareBackdrop(string objectName, Transform detachFrom, Sprite sprite, int sortingOrder, Color color, float span)
+        {
+            Transform existing = detachFrom != null ? detachFrom.Find(objectName) : null;
+            GameObject go = existing != null ? existing.gameObject : GameObject.Find(objectName);
+            if (go == null)
+            {
+                go = new GameObject(objectName);
+                go.AddComponent<SpriteRenderer>();
+            }
+
+            go.transform.SetParent(null, true);
+            go.transform.position = Vector3.zero;
+            go.transform.rotation = Quaternion.identity;
+            go.transform.localScale = Vector3.one;
+
+            SpriteRenderer renderer = go.GetComponent<SpriteRenderer>();
+            if (renderer == null)
+                renderer = go.AddComponent<SpriteRenderer>();
+
+            renderer.sprite = sprite;
+            renderer.drawMode = SpriteDrawMode.Tiled;
+            renderer.size = new Vector2(span, span);
+            renderer.sortingOrder = sortingOrder;
+            renderer.color = color;
+
             Shader shader = Shader.Find("Sprites/Default");
-            if (shader != null)
+            if (shader != null && (renderer.sharedMaterial == null || renderer.sharedMaterial.shader != shader))
                 renderer.sharedMaterial = new Material(shader);
+            return renderer;
         }
     }
 }

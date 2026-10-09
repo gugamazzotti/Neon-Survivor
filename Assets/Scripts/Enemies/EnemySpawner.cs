@@ -6,13 +6,6 @@ namespace NeonSurvivor
     {
         public const int MaxAlive = 40;
 
-        struct Variant
-        {
-            public int Hp;
-            public float Speed;
-            public int SpriteIndex;
-        }
-
         [SerializeField] GameObject enemyPrefab;
         [SerializeField] Sprite triangleSprite;
         [SerializeField] Sprite squareSprite;
@@ -21,16 +14,23 @@ namespace NeonSurvivor
         [SerializeField] float minSpawnInterval = 0.35f;
         [SerializeField] float difficultySeconds = 90f;
 
-        static readonly Variant[] Variants =
-        {
-            new Variant { Hp = 20, Speed = 3.15f, SpriteIndex = 0 },
-            new Variant { Hp = 20, Speed = 2.2f, SpriteIndex = 1 },
-            new Variant { Hp = 30, Speed = 1.55f, SpriteIndex = 2 }
-        };
-
         float timer;
         float elapsed;
+        float mapSpeed = 1f;
+        float miniTimer = 70f;
+        float bossTimer = 140f;
         Transform folder;
+
+        void Start()
+        {
+            MapDefinition map = MapCatalog.Current;
+            spawnInterval = map.SpawnInterval;
+            minSpawnInterval = map.MinSpawnInterval;
+            mapSpeed = map.EnemySpeed;
+            int mapIndex = Mathf.Clamp(GameSession.MapIndex, 0, MapCatalog.Count - 1);
+            miniTimer = Mathf.Max(40f, 70f - mapIndex * 8f);
+            bossTimer = Mathf.Max(90f, 140f - mapIndex * 12f);
+        }
 
         public void SetPrefab(GameObject prefab)
         {
@@ -66,22 +66,83 @@ namespace NeonSurvivor
                 return;
 
             elapsed += Time.deltaTime;
+            float speedMultiplier = Mathf.Lerp(1f, 1.45f, Mathf.Clamp01(elapsed / 120f));
+            TrySpawnElite(speedMultiplier);
+
             float interval = Mathf.Lerp(spawnInterval, minSpawnInterval, Mathf.Clamp01(elapsed / difficultySeconds));
             timer += Time.deltaTime;
             if (timer < interval)
                 return;
 
             timer = 0f;
-            if (Enemy.All.Count >= MaxAlive)
+            if (CountAlive() >= MaxAlive)
                 return;
 
-            Spawn(Mathf.Lerp(1f, 1.45f, Mathf.Clamp01(elapsed / 120f)));
+            Spawn(PickTrash(elapsed + GameSession.MapIndex * 18f), speedMultiplier, 1f);
         }
 
-        void Spawn(float speedMultiplier)
+        void TrySpawnElite(float speedMultiplier)
+        {
+            if (elapsed >= miniTimer && CountOf(EnemyArchetype.MiniBoss) == 0)
+            {
+                Spawn(EnemyArchetype.MiniBoss, speedMultiplier, 1.25f);
+                miniTimer = elapsed + 80f;
+                Announce("spawn.mini");
+            }
+
+            if (elapsed >= bossTimer && CountOf(EnemyArchetype.Boss) == 0)
+            {
+                Spawn(EnemyArchetype.Boss, speedMultiplier, 1.4f);
+                bossTimer = elapsed + 120f;
+                Announce("spawn.boss");
+                if (CameraController.Instance != null)
+                    CameraController.Instance.Shake(0.2f);
+            }
+        }
+
+        static EnemyArchetype PickTrash(float pressure)
+        {
+            float roll = Random.value;
+            if (pressure >= 55f && roll < 0.12f)
+                return EnemyArchetype.Dasher;
+            if (pressure >= 40f && roll < 0.24f)
+                return EnemyArchetype.Weaver;
+            if (pressure >= 22f && roll < 0.42f)
+                return EnemyArchetype.Gunner;
+            return (EnemyArchetype)Random.Range(0, 3);
+        }
+
+        void Spawn(EnemyArchetype archetype, float speedMultiplier, float distanceScale)
+        {
+            if (enemyPrefab == null || PlayerController.Instance == null)
+                return;
+
+            Vector3 position = RingPosition(distanceScale);
+            GameObject go = Instantiate(enemyPrefab, position, Quaternion.identity, Folder());
+            go.SetActive(true);
+            Enemy enemy = go.GetComponent<Enemy>();
+            if (enemy == null)
+                return;
+
+            enemy.ApplyArchetype(archetype, speedMultiplier * mapSpeed, triangleSprite, squareSprite, circleSprite);
+        }
+
+        Transform Folder()
+        {
+            if (folder != null)
+                return folder;
+
+            GameObject holder = GameObject.Find("Enemies");
+            if (holder == null)
+                holder = new GameObject("Enemies");
+            folder = holder.transform;
+            return folder;
+        }
+
+        static Vector3 RingPosition(float distanceScale)
         {
             Camera cam = Camera.main;
-            float halfHeight = 5f;
+            float halfHeight = 21f;
             float halfWidth = halfHeight * (16f / 9f);
             Vector2 center = PlayerController.Instance.transform.position;
             if (cam != null)
@@ -93,45 +154,41 @@ namespace NeonSurvivor
             }
 
             float radius = Mathf.Sqrt(halfWidth * halfWidth + halfHeight * halfHeight) + 1.35f;
-            radius *= Random.Range(1f, 1.18f);
+            radius *= Random.Range(1f, 1.18f) * distanceScale;
             float angle = Random.Range(0f, Mathf.PI * 2f);
-            Vector3 position = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+            return center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius;
+        }
 
-            if (folder == null)
+        static int CountAlive()
+        {
+            int count = 0;
+            for (int i = 0; i < Enemy.All.Count; i++)
             {
-                GameObject holder = GameObject.Find("Enemies");
-                if (holder == null)
-                    holder = new GameObject("Enemies");
-                folder = holder.transform;
+                if (Enemy.All[i] != null && !Enemy.All[i].IsDying)
+                    count++;
             }
 
-            GameObject go = Instantiate(enemyPrefab, position, Quaternion.identity, folder);
-            go.SetActive(true);
-            Enemy enemy = go.GetComponent<Enemy>();
-            if (enemy == null)
-                return;
-
-            int index = Random.Range(0, Variants.Length);
-            Variant variant = Variants[index];
-            enemy.Configure(variant.Hp, variant.Speed * speedMultiplier, ColorFor(variant.SpriteIndex), SpriteFor(variant.SpriteIndex));
+            return count;
         }
 
-        static Color ColorFor(int index)
+        static int CountOf(EnemyArchetype archetype)
         {
-            if (index == 0)
-                return NeonVisuals.Magenta;
-            if (index == 1)
-                return NeonVisuals.Orange;
-            return NeonVisuals.Violet;
+            int count = 0;
+            for (int i = 0; i < Enemy.All.Count; i++)
+            {
+                Enemy enemy = Enemy.All[i];
+                if (enemy != null && !enemy.IsDying && enemy.Archetype == archetype)
+                    count++;
+            }
+
+            return count;
         }
 
-        Sprite SpriteFor(int index)
+        static void Announce(string key)
         {
-            if (index == 0)
-                return triangleSprite;
-            if (index == 1)
-                return squareSprite;
-            return circleSprite;
+            HUDController hud = FindObjectOfType<HUDController>();
+            if (hud != null)
+                hud.ShowToast(Loc.Get(key));
         }
     }
 }

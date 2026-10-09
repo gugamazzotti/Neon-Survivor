@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace NeonSurvivor
@@ -6,7 +7,11 @@ namespace NeonSurvivor
     {
         FireRate,
         Multishot,
-        BulletSpeed
+        BulletSpeed,
+        Shield,
+        Pulse,
+        Orbit,
+        Missile
     }
 
     public struct UpgradeChoice
@@ -49,53 +54,69 @@ namespace NeonSurvivor
 
         public static UpgradeChoice[] RollThree()
         {
-            UpgradeType[] pool =
+            UpgradeType[] all = (UpgradeType[])System.Enum.GetValues(typeof(UpgradeType));
+            List<UpgradeType> open = new List<UpgradeType>(all.Length);
+            PlayerPowers powers = ResolvePowers();
+            for (int i = 0; i < all.Length; i++)
             {
-                UpgradeType.FireRate,
-                UpgradeType.Multishot,
-                UpgradeType.BulletSpeed
-            };
-
-            for (int i = 0; i < pool.Length; i++)
-            {
-                int swap = Random.Range(i, pool.Length);
-                UpgradeType tmp = pool[i];
-                pool[i] = pool[swap];
-                pool[swap] = tmp;
+                if (powers != null && powers.IsMaxed(all[i]))
+                    continue;
+                open.Add(all[i]);
             }
 
-            UpgradeChoice[] choices = new UpgradeChoice[pool.Length];
-            for (int i = 0; i < pool.Length; i++)
-                choices[i] = Describe(pool[i]);
+            for (int i = 0; i < open.Count; i++)
+            {
+                int swap = Random.Range(i, open.Count);
+                UpgradeType tmp = open[i];
+                open[i] = open[swap];
+                open[swap] = tmp;
+            }
+
+            int count = Mathf.Min(3, open.Count);
+            UpgradeChoice[] choices = new UpgradeChoice[count];
+            for (int i = 0; i < count; i++)
+                choices[i] = Describe(open[i], powers);
             return choices;
         }
 
         public static UpgradeChoice Describe(UpgradeType type)
         {
+            return Describe(type, ResolvePowers());
+        }
+
+        static UpgradeChoice Describe(UpgradeType type, PlayerPowers powers)
+        {
+            int rank = powers == null ? 0 : powers.RankOf(type);
             switch (type)
             {
                 case UpgradeType.FireRate:
-                    return new UpgradeChoice
-                    {
-                        Type = type,
-                        Title = "Cadência",
-                        Description = "Intervalo entre tiros -10%"
-                    };
+                    return Choice(type, "upgrade.fire.title", "upgrade.fire.desc", false, rank);
                 case UpgradeType.Multishot:
-                    return new UpgradeChoice
-                    {
-                        Type = type,
-                        Title = "Tiro múltiplo",
-                        Description = "+1 projétil em arco"
-                    };
+                    return Choice(type, "upgrade.multi.title", "upgrade.multi.desc", false, rank);
+                case UpgradeType.BulletSpeed:
+                    return Choice(type, "upgrade.speed.title", "upgrade.speed.desc", false, rank);
+                case UpgradeType.Shield:
+                    return Choice(type, "upgrade.shield.title", rank > 0 ? "upgrade.shield.up" : "upgrade.shield.desc", true, rank);
+                case UpgradeType.Pulse:
+                    return Choice(type, "upgrade.pulse.title", rank > 0 ? "upgrade.pulse.up" : "upgrade.pulse.desc", true, rank);
+                case UpgradeType.Orbit:
+                    return Choice(type, "upgrade.orb.title", rank > 0 ? "upgrade.orb.up" : "upgrade.orb.desc", true, rank);
                 default:
-                    return new UpgradeChoice
-                    {
-                        Type = type,
-                        Title = "Projétil rápido",
-                        Description = "Velocidade do tiro +20%"
-                    };
+                    return Choice(type, "upgrade.missile.title", rank > 0 ? "upgrade.missile.up" : "upgrade.missile.desc", true, rank);
             }
+        }
+
+        static UpgradeChoice Choice(UpgradeType type, string titleKey, string descKey, bool showLevel, int rank)
+        {
+            string title = Loc.Get(titleKey);
+            if (showLevel)
+                title += "  " + Loc.Format("upgrade.level", rank + 1);
+            return new UpgradeChoice
+            {
+                Type = type,
+                Title = title,
+                Description = Loc.Get(descKey)
+            };
         }
 
         public void UpgradeFireRate()
@@ -122,29 +143,53 @@ namespace NeonSurvivor
             applying = true;
             try
             {
-                PlayerCombat combat = ResolveCombat();
-                if (combat != null)
+                if (type == UpgradeType.Shield || type == UpgradeType.Pulse || type == UpgradeType.Orbit || type == UpgradeType.Missile)
                 {
-                    switch (type)
+                    PlayerPowers powers = ResolvePowers();
+                    if (powers == null && PlayerController.Instance != null)
+                        powers = PlayerController.Instance.gameObject.AddComponent<PlayerPowers>();
+                    if (powers != null)
+                        powers.RankUp(type);
+                }
+                else
+                {
+                    PlayerCombat combat = ResolveCombat();
+                    if (combat != null)
                     {
-                        case UpgradeType.FireRate:
-                            combat.ReduceFireRate();
-                            break;
-                        case UpgradeType.Multishot:
-                            combat.AddMultishot();
-                            break;
-                        case UpgradeType.BulletSpeed:
-                            combat.IncreaseBulletSpeed();
-                            break;
+                        switch (type)
+                        {
+                            case UpgradeType.FireRate:
+                                combat.ReduceFireRate();
+                                break;
+                            case UpgradeType.Multishot:
+                                combat.AddMultishot();
+                                break;
+                            case UpgradeType.BulletSpeed:
+                                combat.IncreaseBulletSpeed();
+                                break;
+                        }
                     }
                 }
 
+                gm.RegisterUpgrade(type);
                 gm.CompleteUpgrade();
             }
             finally
             {
                 applying = false;
             }
+        }
+
+        static PlayerPowers ResolvePowers()
+        {
+            if (PlayerController.Instance != null)
+            {
+                PlayerPowers onPlayer = PlayerController.Instance.GetComponent<PlayerPowers>();
+                if (onPlayer != null)
+                    return onPlayer;
+            }
+
+            return FindObjectOfType<PlayerPowers>();
         }
 
         static PlayerCombat ResolveCombat()
