@@ -52,16 +52,30 @@ namespace NeonSurvivor
                 glowRenderer.color = new Color(color.r, color.g, color.b, 0.4f);
         }
 
-        public static void PlaceWorldBackdrop(Camera cam, Color starTint)
+        public static void PlaceWorldBackdrop(Camera cam, Color starTint, bool brightLayer = true)
         {
             if (cam == null)
                 return;
 
             float span = BackdropSpan(cam);
             PrepareBackdrop("Starfield", cam.transform, NeonVisuals.Stars, -50, starTint, span);
-            Color bright = new Color(starTint.r * 1.25f, starTint.g * 1.25f, Mathf.Min(2.2f, starTint.b * 1.45f), 0.95f);
-            PrepareBackdrop("StarBright", cam.transform, NeonVisuals.BrightStars, -47, bright, span);
-            PrepareBackdrop("WorldGrid", null, NeonVisuals.Grid, -40, new Color(0.35f, 0.9f, 1f, 0.1f), span);
+            if (brightLayer)
+            {
+                Color bright = new Color(starTint.r * 1.15f, starTint.g * 1.15f, Mathf.Min(1.6f, starTint.b * 1.25f), 0.8f);
+                PrepareBackdrop("StarBright", cam.transform, NeonVisuals.BrightStars, -47, bright, span);
+            }
+            else
+            {
+                GameObject bright = GameObject.Find("StarBright");
+                if (bright != null)
+                {
+                    bright.SetActive(false);
+                    Object.Destroy(bright);
+                }
+            }
+            GameObject grid = GameObject.Find("WorldGrid");
+            if (grid != null)
+                Object.Destroy(grid);
             SpaceAmbience.Ensure(cam, starTint);
         }
 

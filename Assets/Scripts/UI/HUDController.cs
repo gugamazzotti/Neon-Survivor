@@ -17,6 +17,7 @@ namespace NeonSurvivor
         [SerializeField] Button restartButton;
         [SerializeField] Button menuButton;
         [SerializeField] Text scoreText;
+        [SerializeField] Text coinText;
         [SerializeField] Text gameOverDetail;
         [SerializeField] Text toastText;
         GameObject toastRoot;
@@ -174,6 +175,9 @@ namespace NeonSurvivor
                     score += " / " + MapCatalog.Maps[nextMap].RequiredScore;
                 scoreText.text = Loc.Get(MapCatalog.Current.NameKey) + "   " + score;
             }
+
+            if (coinText != null)
+                coinText.text = Loc.Format("hud.coins", SaveProfile.Coins);
         }
 
         void ApplyLabels(UpgradeChoice[] choices)
@@ -221,22 +225,32 @@ namespace NeonSurvivor
             plateGo.transform.SetParent(transform, false);
             Image plate = plateGo.AddComponent<Image>();
             plate.raycastTarget = false;
-            if (NeonArt.Panel != null)
-                NeonArt.Paint(plate, NeonArt.Panel, true);
+            Sprite hudSprite = NeonArt.IsSlim(NeonArt.Card) ? NeonArt.Card : NeonArt.Panel;
+            bool slimHud = NeonArt.IsSlim(hudSprite);
+            if (hudSprite != null)
+                NeonArt.Paint(plate, hudSprite, true);
             else
             {
                 plate.sprite = NeonVisuals.White;
                 plate.color = new Color(0.02f, 0.04f, 0.08f, 0.72f);
             }
 
-            Place(plate.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -16f), new Vector2(1032f, 530f));
+            Place(plate.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -16f), slimHud ? new Vector2(980f, 400f) : new Vector2(1032f, 580f));
 
             RectTransform well = new GameObject("Well", typeof(RectTransform)).GetComponent<RectTransform>();
             well.SetParent(plateGo.transform, false);
             well.anchorMin = Vector2.zero;
             well.anchorMax = Vector2.one;
-            well.offsetMin = new Vector2(118f, 108f);
-            well.offsetMax = new Vector2(-118f, -116f);
+            if (slimHud)
+            {
+                well.offsetMin = new Vector2(40f, 32f);
+                well.offsetMax = new Vector2(-40f, -32f);
+            }
+            else
+            {
+                well.offsetMin = new Vector2(118f, 108f);
+                well.offsetMax = new Vector2(-118f, -116f);
+            }
 
             Text title = CreateText("Title", well, font, 28, FontStyle.Bold, new Color(0.55f, 1f, 1f, 0.9f), TextAnchor.UpperLeft);
             Place(title.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -2f), new Vector2(760f, 36f));
@@ -245,14 +259,17 @@ namespace NeonSurvivor
             levelText = CreateText("Level", well, font, 30, FontStyle.Bold, Color.white, TextAnchor.UpperLeft);
             Place(levelText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -40f), new Vector2(760f, 36f));
 
-            healthFill = CreateBar(well, "Health", new Vector2(8f, -86f), new Vector2(760f, 52f), new Color(1f, 0.28f, 0.48f, 1f));
-            xpFill = CreateBar(well, "XP", new Vector2(8f, -148f), new Vector2(760f, 44f), new Color(0.25f, 0.95f, 1f, 1f));
+            healthFill = CreateBar(well, "Health", new Vector2(8f, -86f), new Vector2(760f, 64f), new Color(1f, 0.28f, 0.48f, 1f));
+            xpFill = CreateBar(well, "XP", new Vector2(8f, -160f), new Vector2(760f, 56f), new Color(0.25f, 0.95f, 1f, 1f));
 
             xpText = CreateText("XpLabel", well, font, 20, FontStyle.Normal, new Color(0.75f, 0.95f, 1f, 0.9f), TextAnchor.UpperLeft);
-            Place(xpText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -198f), new Vector2(760f, 28f));
+            Place(xpText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -222f), new Vector2(760f, 28f));
 
             scoreText = CreateText("Score", well, font, 22, FontStyle.Bold, new Color(0.95f, 0.85f, 0.45f, 0.95f), TextAnchor.UpperLeft);
-            Place(scoreText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -228f), new Vector2(760f, 32f));
+            Place(scoreText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -252f), new Vector2(760f, 32f));
+
+            coinText = CreateText("Coins", well, font, 22, FontStyle.Bold, new Color(1f, 0.86f, 0.4f, 1f), TextAnchor.UpperLeft);
+            Place(coinText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -286f), new Vector2(760f, 32f));
 
             toastRoot = new GameObject("Toast", typeof(RectTransform));
             toastRoot.transform.SetParent(transform, false);
@@ -292,8 +309,9 @@ namespace NeonSurvivor
             restartButton.GetComponentInChildren<Text>().text = Loc.Get("gameover.retry");
             menuButton.GetComponentInChildren<Text>().text = Loc.Get("gameover.menu");
             ignoredButtons[2].gameObject.SetActive(false);
-            restartButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -620f);
-            menuButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, -860f);
+            bool slimButtons = NeonArt.IsSlim(NeonArt.Button);
+            restartButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, slimButtons ? -420f : -620f);
+            menuButton.GetComponent<RectTransform>().anchoredPosition = new Vector2(0f, slimButtons ? -590f : -860f);
             gameOverDetail = gameOverPanel.transform.Find("Card/Subtitle").GetComponent<Text>();
             gameOverDetail.horizontalOverflow = HorizontalWrapMode.Wrap;
             gameOverDetail.rectTransform.sizeDelta = new Vector2(700f, 110f);
@@ -318,30 +336,33 @@ namespace NeonSurvivor
             GameObject card = new GameObject("Card", typeof(RectTransform));
             card.transform.SetParent(panel.transform, false);
             Image cardImage = card.AddComponent<Image>();
-            if (NeonArt.Panel != null)
-                NeonArt.Paint(cardImage, NeonArt.Panel, true);
+            Sprite cardSprite = NeonArt.IsSlim(NeonArt.Card) ? NeonArt.Card : NeonArt.Panel;
+            if (cardSprite != null)
+                NeonArt.Paint(cardImage, cardSprite, true);
             else
             {
                 cardImage.sprite = NeonVisuals.White;
                 cardImage.color = new Color(0.03f, 0.05f, 0.1f, 0.96f);
             }
-            Place(card.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(960f, 1120f));
+            bool slim = NeonArt.IsSlim(NeonArt.Button);
+            Place(card.GetComponent<RectTransform>(), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, slim ? new Vector2(900f, 980f) : new Vector2(960f, 1120f));
 
             Text title = CreateText("Heading", card.transform, font, 48, FontStyle.Bold, new Color(0.6f, 1f, 1f, 1f), TextAnchor.MiddleCenter);
-            Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -140f), new Vector2(700f, 72f));
+            Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), slim ? new Vector2(0f, -72f) : new Vector2(0f, -140f), new Vector2(700f, 72f));
             title.text = heading;
 
             Text sub = CreateText("Subtitle", card.transform, font, 24, FontStyle.Normal, new Color(0.8f, 0.9f, 1f, 0.85f), TextAnchor.MiddleCenter);
-            Place(sub.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -220f), new Vector2(700f, 64f));
+            Place(sub.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), slim ? new Vector2(0f, -148f) : new Vector2(0f, -220f), new Vector2(700f, 64f));
             sub.text = subtitle;
 
             buttons = new Button[3];
             labels = new Text[3];
-            float[] y = { -380f, -620f, -860f };
+            float buttonH = slim ? 148f : 200f;
+            float[] y = slim ? new[] { -250f, -420f, -590f } : new[] { -380f, -620f, -860f };
             for (int i = 0; i < 3; i++)
             {
                 buttons[i] = CreateButton(card.transform, "Choice" + i, font, out labels[i]);
-                Place(buttons[i].GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, y[i]), new Vector2(700f, 200f));
+                Place(buttons[i].GetComponent<RectTransform>(), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, y[i]), new Vector2(700f, buttonH));
             }
 
             return panel;
@@ -372,29 +393,43 @@ namespace NeonSurvivor
             RectTransform labelRect = label.rectTransform;
             labelRect.anchorMin = Vector2.zero;
             labelRect.anchorMax = Vector2.one;
-            labelRect.offsetMin = new Vector2(150f, 70f);
-            labelRect.offsetMax = new Vector2(-150f, -70f);
+            bool slim = NeonArt.IsSlim(NeonArt.Button);
+            labelRect.offsetMin = slim ? new Vector2(48f, 16f) : new Vector2(150f, 70f);
+            labelRect.offsetMax = slim ? new Vector2(-48f, -16f) : new Vector2(-150f, -70f);
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
             label.verticalOverflow = VerticalWrapMode.Truncate;
             label.text = Loc.Get("upgrade.placeholder");
             return button;
         }
 
+        static Sprite roundedBar;
+
         static Image CreateBar(Transform parent, string name, Vector2 position, Vector2 size, Color fillColor)
         {
-            GameObject background = new GameObject(name + "Bg", typeof(RectTransform));
-            background.transform.SetParent(parent, false);
-            Image bg = background.AddComponent<Image>();
-            bg.sprite = NeonVisuals.White;
-            bg.color = new Color(1f, 1f, 1f, 0.12f);
-            bg.raycastTarget = false;
-            if (NeonArt.Bar != null)
-                NeonArt.Paint(bg, NeonArt.Bar, true);
+            GameObject root = new GameObject(name, typeof(RectTransform));
+            root.transform.SetParent(parent, false);
+            Place(root.GetComponent<RectTransform>(), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), position, size);
 
-            Place(bg.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), position, size);
+            float lipY = Mathf.Clamp(size.y * 0.22f, 10f, 16f);
+            float lipX = Mathf.Max(28f, size.y * 0.46f);
+            GameObject clip = new GameObject(name + "Clip", typeof(RectTransform));
+            clip.transform.SetParent(root.transform, false);
+            RectTransform clipRect = clip.GetComponent<RectTransform>();
+            clipRect.anchorMin = Vector2.zero;
+            clipRect.anchorMax = Vector2.one;
+            clipRect.offsetMin = new Vector2(lipX, lipY);
+            clipRect.offsetMax = new Vector2(-lipX, -lipY);
+
+            Image track = clip.AddComponent<Image>();
+            track.sprite = RoundedBar();
+            track.type = Image.Type.Sliced;
+            track.color = new Color(fillColor.r, fillColor.g, fillColor.b, 0.22f);
+            track.raycastTarget = false;
+            Mask mask = clip.AddComponent<Mask>();
+            mask.showMaskGraphic = true;
 
             GameObject fillGo = new GameObject(name + "Fill", typeof(RectTransform));
-            fillGo.transform.SetParent(background.transform, false);
+            fillGo.transform.SetParent(clip.transform, false);
             Image fill = fillGo.AddComponent<Image>();
             fill.sprite = NeonVisuals.White;
             fill.color = fillColor;
@@ -406,9 +441,68 @@ namespace NeonSurvivor
             RectTransform fillRect = fill.rectTransform;
             fillRect.anchorMin = Vector2.zero;
             fillRect.anchorMax = Vector2.one;
-            fillRect.offsetMin = NeonArt.Bar != null ? new Vector2(36f, 16f) : Vector2.zero;
-            fillRect.offsetMax = NeonArt.Bar != null ? new Vector2(-36f, -16f) : Vector2.zero;
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
+
+            GameObject frameGo = new GameObject(name + "Frame", typeof(RectTransform));
+            frameGo.transform.SetParent(root.transform, false);
+            Image frame = frameGo.AddComponent<Image>();
+            frame.raycastTarget = false;
+            if (NeonArt.Bar != null)
+                NeonArt.Paint(frame, NeonArt.Bar, true);
+            else
+            {
+                frame.sprite = RoundedBar();
+                frame.type = Image.Type.Sliced;
+                frame.color = new Color(1f, 1f, 1f, 0.16f);
+            }
+
+            RectTransform frameRect = frame.rectTransform;
+            frameRect.anchorMin = Vector2.zero;
+            frameRect.anchorMax = Vector2.one;
+            frameRect.offsetMin = Vector2.zero;
+            frameRect.offsetMax = Vector2.zero;
             return fill;
+        }
+
+        static Sprite RoundedBar()
+        {
+            if (roundedBar != null)
+                return roundedBar;
+
+            const int size = 48;
+            const float radius = 16f;
+            Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            Color32[] pixels = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float px = x + 0.5f;
+                    float py = y + 0.5f;
+                    float ix = Mathf.Clamp(px, radius, size - radius);
+                    float iy = Mathf.Clamp(py, radius, size - radius);
+                    float dist = Mathf.Sqrt((px - ix) * (px - ix) + (py - iy) * (py - iy));
+                    byte alpha = (byte)Mathf.RoundToInt(Mathf.Clamp01(radius - dist + 0.5f) * 255f);
+                    pixels[y * size + x] = new Color32(255, 255, 255, alpha);
+                }
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply(false, false);
+            texture.filterMode = FilterMode.Bilinear;
+            texture.wrapMode = TextureWrapMode.Clamp;
+            roundedBar = Sprite.Create(
+                texture,
+                new Rect(0f, 0f, size, size),
+                new Vector2(0.5f, 0.5f),
+                100f,
+                0u,
+                SpriteMeshType.FullRect,
+                new Vector4(radius, radius, radius, radius),
+                false);
+            roundedBar.name = "hud-bar-mask";
+            return roundedBar;
         }
 
         static Text CreateText(string name, Transform parent, Font font, int size, FontStyle style, Color color, TextAnchor anchor)

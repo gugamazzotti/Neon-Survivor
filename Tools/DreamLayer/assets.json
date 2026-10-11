@@ -66,5 +66,44 @@
     "name": "ui-toast",
     "aspect_ratio": "16:9",
     "prompt": "Short horizontal video-game notification banner, empty center, no text, no letters, no numbers, gold and cyan neon frame, isolated on a pure black background"
+  },
+  {
+    "name": "ui-btn",
+    "aspect_ratio": "16:9",
+    "prompt": "A single wide horizontal sci-fi game button, perfectly rectangular, thin even cyan neon rim about one tenth of the height, flat dark charcoal center, no spikes, no brackets, no glow blobs, no text, no icons, isolated on a pure black background"
+  },
+  {
+    "name": "ui-card",
+    "aspect_ratio": "16:9",
+    "prompt": "A single wide horizontal sci-fi game list card, perfectly rectangular, thin even cyan neon rim with a slim magenta inner line, flat dark center, no corner brackets, no spikes, no text, no icons, isolated on a pure black background"
+  },
+  {
+    "name": "ui-banner",
+    "aspect_ratio": "16:9",
+    "prompt": "A wide sci-fi title plaque, perfectly rectangular, thin cyan neon frame, empty dark center, one slim magenta accent line, no letters, no numbers, no icons, isolated on a pure black background"
+  },
+  {
+    "name": "coin",
+    "prompt": "2D game sprite of a small hexagonal neon gold coin, bright rim, simple and centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "ship-blade",
+    "prompt": "Top-down 2D game sprite of a narrow neon white and cyan dart starfighter, long nose, small wings, glowing engine, flat vector, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "ship-bastion",
+    "prompt": "Top-down 2D game sprite of a bulky neon amber heavy starfighter, wide armor plates, twin engines, flat vector, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "ship-comet",
+    "prompt": "Top-down 2D game sprite of an elegant neon magenta and gold swept-wing starfighter, crescent wings, glowing engines, flat vector, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "projectile-player",
+    "prompt": "2D game sprite of a tiny neon yellow-green energy bolt, vertical, bright core, short streak, centered, isolated on a pure black background, no text, no scenery, no border"
+  },
+  {
+    "name": "projectile-hostile",
+    "prompt": "2D game sprite of a tiny neon red energy bolt, vertical, bright crimson core, short streak, centered, isolated on a pure black background, no text, no scenery, no border"
   }
 ]

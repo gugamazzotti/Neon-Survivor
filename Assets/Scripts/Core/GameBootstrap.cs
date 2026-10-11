@@ -79,7 +79,7 @@ namespace NeonSurvivor
             }
 
             cam.orthographic = true;
-            cam.orthographicSize = 21f;
+            cam.orthographicSize = 15f;
             cam.transform.position = new Vector3(cam.transform.position.x, cam.transform.position.y, -10f);
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = MapCatalog.Current.Background;
@@ -89,7 +89,7 @@ namespace NeonSurvivor
             if (cam.GetComponent<CameraController>() == null)
                 cam.gameObject.AddComponent<CameraController>();
 
-            NeonFactory.PlaceWorldBackdrop(cam, MapCatalog.Current.StarTint);
+            NeonFactory.PlaceWorldBackdrop(cam, MapCatalog.Current.StarTint, false);
         }
 
         void EnsureManagers()
@@ -100,6 +100,10 @@ namespace NeonSurvivor
                 gameObject.AddComponent<UpgradeManager>();
             if (FindObjectOfType<EnemySpawner>() == null)
                 gameObject.AddComponent<EnemySpawner>();
+            if (GetComponent<CoinField>() == null)
+                gameObject.AddComponent<CoinField>();
+            if (GetComponent<HealthField>() == null)
+                gameObject.AddComponent<HealthField>();
         }
 
         void EnsurePrefabs()
@@ -141,10 +145,7 @@ namespace NeonSurvivor
                     NeonVisuals.GlowMaterial,
                     new Vector3(0.8f, 0.8f, 1f),
                     20);
-                if (NeonArt.Player != null)
-                    NeonArt.Apply(go, NeonArt.Player);
-                else
-                    NeonFactory.Tint(go, NeonVisuals.Cyan);
+                ApplyShip(go);
                 NeonFactory.TrySetTag(go, "Player");
                 go.transform.position = Vector3.zero;
                 player = go.AddComponent<PlayerController>();
@@ -161,8 +162,7 @@ namespace NeonSurvivor
                     player.gameObject.AddComponent<PlayerPowers>();
                 if (player.GetComponent<ShipThruster>() == null)
                     player.gameObject.AddComponent<ShipThruster>();
-                if (NeonArt.Player != null)
-                    NeonArt.Apply(player.gameObject, NeonArt.Player);
+                ApplyShip(player.gameObject);
             }
 
             if (combat != null)
@@ -171,6 +171,16 @@ namespace NeonSurvivor
             CameraController cameraController = FindObjectOfType<CameraController>();
             if (cameraController != null)
                 cameraController.EnsureTarget(player.transform);
+        }
+
+        static void ApplyShip(GameObject actor)
+        {
+            ShipDefinition ship = ShipCatalog.Selected;
+            Sprite sprite = NeonArt.Named(ship.Art);
+            if (sprite != null)
+                NeonArt.Apply(actor, sprite);
+            else
+                NeonFactory.Tint(actor, ship.Tint);
         }
 
         void EnsureHud()
@@ -216,10 +226,11 @@ namespace NeonSurvivor
                 NeonVisuals.GlowMaterial,
                 new Vector3(0.22f, 0.5f, 1f),
                 12);
-            if (NeonArt.Projectile != null)
+            if (NeonArt.PlayerShot != null)
             {
-                NeonArt.Apply(go, NeonArt.Projectile);
-                go.transform.localScale = new Vector3(0.38f, 0.38f, 1f);
+                NeonArt.Apply(go, NeonArt.PlayerShot);
+                NeonArt.Outline(go, new Color(1.7f, 2.2f, 0.45f, 0.45f));
+                go.transform.localScale = new Vector3(0.55f, 0.55f, 1f);
             }
             else
                 NeonFactory.Tint(go, NeonVisuals.Yellow);
@@ -231,8 +242,8 @@ namespace NeonSurvivor
             trailRenderer.sprite = NeonVisuals.Orb;
             trailRenderer.sharedMaterial = NeonVisuals.GlowMaterial;
             trailRenderer.sortingOrder = 11;
-            trailRenderer.color = new Color(1.4f, 1.05f, 0.35f, 0.45f);
-            if (NeonArt.Projectile != null)
+            trailRenderer.color = new Color(1.5f, 2.1f, 0.4f, 0.45f);
+            if (NeonArt.PlayerShot != null)
                 trail.SetActive(false);
             go.AddComponent<Projectile>();
             return go;
@@ -251,6 +262,7 @@ namespace NeonSurvivor
                 NeonArt.Apply(go, NeonArt.Xp);
             else
                 NeonFactory.Tint(go, NeonVisuals.Green);
+            NeonArt.Outline(go, NeonArt.PickupOutline);
             NeonFactory.TrySetTag(go, "XP");
             go.AddComponent<XPOrb>();
             return go;

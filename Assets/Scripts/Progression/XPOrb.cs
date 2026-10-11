@@ -83,6 +83,7 @@ namespace NeonSurvivor
                 NeonArt.Apply(go, NeonArt.Xp);
             else
                 NeonFactory.Tint(go, NeonVisuals.Green);
+            NeonArt.Outline(go, NeonArt.PickupOutline);
             NeonFactory.TrySetTag(go, "XP");
             go.AddComponent<XPOrb>();
             return go;

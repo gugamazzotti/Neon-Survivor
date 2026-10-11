@@ -36,6 +36,7 @@ namespace NeonSurvivor
                 NeonArt.Apply(go, NeonArt.Magnet);
             else
                 NeonFactory.Tint(go, new Color(1.7f, 1.25f, 0.28f, 1f));
+            NeonArt.Outline(go, NeonArt.PickupOutline);
             go.transform.position = position;
             return go.AddComponent<MagnetPickup>();
         }

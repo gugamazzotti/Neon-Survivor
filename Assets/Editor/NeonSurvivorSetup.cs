@@ -175,7 +175,7 @@ namespace NeonSurvivor.EditorTools
         static void ConfigureCamera(Camera cam, Sprite stars, Material starMaterial)
         {
             cam.orthographic = true;
-            cam.orthographicSize = 21f;
+            cam.orthographicSize = 15f;
             cam.transform.position = new Vector3(0f, 0f, -10f);
             cam.transform.rotation = Quaternion.identity;
             cam.clearFlags = CameraClearFlags.SolidColor;

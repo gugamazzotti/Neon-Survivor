@@ -38,6 +38,17 @@ namespace NeonSurvivor.Tests
         }
 
         [Test]
+        public void ShipPurchase_RequiresEnoughCoinsAndAnUnownedHull()
+        {
+            Assert.IsFalse(ShipCatalog.CanPurchase(24, 23, false));
+            Assert.IsTrue(ShipCatalog.CanPurchase(24, 24, false));
+            Assert.IsFalse(ShipCatalog.CanPurchase(24, 40, true));
+            Assert.IsFalse(ShipCatalog.CanPurchase(0, 10, false));
+            Assert.AreEqual(0, ShipCatalog.Ships[0].Price);
+            Assert.Greater(ShipCatalog.Ships[1].Price, 0);
+        }
+
+        [Test]
         public void Achievements_UnlockOnExactGoals()
         {
             Assert.AreEqual(MapCatalog.Maps[1].RequiredScore, AchievementCatalog.Goal("score_400"));

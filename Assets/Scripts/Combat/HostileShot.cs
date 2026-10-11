@@ -20,13 +20,14 @@ namespace NeonSurvivor
                 NeonVisuals.GlowMaterial,
                 new Vector3(0.26f, 0.4f, 1f),
                 11);
-            if (NeonArt.Projectile != null)
+            if (NeonArt.EnemyShot != null)
             {
-                NeonArt.Apply(go, NeonArt.Projectile);
-                go.transform.localScale = new Vector3(0.32f, 0.32f, 1f);
+                NeonArt.Apply(go, NeonArt.EnemyShot);
+                NeonArt.Outline(go, new Color(2.4f, 0.25f, 0.3f, 0.5f));
+                go.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
             }
             else
-                NeonFactory.Tint(go, NeonVisuals.Yellow);
+                NeonFactory.Tint(go, new Color(2.4f, 0.28f, 0.32f, 1f));
             GameObject trail = new GameObject("Trail");
             trail.transform.SetParent(go.transform, false);
             trail.transform.localPosition = new Vector3(0f, -0.7f, 0f);
@@ -35,8 +36,8 @@ namespace NeonSurvivor
             trailRenderer.sprite = NeonVisuals.Orb;
             trailRenderer.sharedMaterial = NeonVisuals.GlowMaterial;
             trailRenderer.sortingOrder = 10;
-            trailRenderer.color = new Color(2.2f, 1.5f, 0.4f, 0.4f);
-            if (NeonArt.Projectile != null)
+            trailRenderer.color = new Color(2.3f, 0.3f, 0.32f, 0.45f);
+            if (NeonArt.EnemyShot != null)
                 trail.SetActive(false);
             go.transform.position = position;
             if (direction.sqrMagnitude < 0.0001f)

@@ -142,7 +142,7 @@ namespace NeonSurvivor
         static Vector3 RingPosition(float distanceScale)
         {
             Camera cam = Camera.main;
-            float halfHeight = 21f;
+            float halfHeight = 15f;
             float halfWidth = halfHeight * (16f / 9f);
             Vector2 center = PlayerController.Instance.transform.position;
             if (cam != null)

@@ -202,6 +202,22 @@ namespace NeonSurvivor.Tests
         }
 
         [Test]
+        public void HealthPickup_WaitsForDamage_ThenRestoresTheHull()
+        {
+            PlayerController player = CreatePlayer(Vector3.zero);
+            HealthPickup heal = HealthPickup.Spawn(new Vector3(0.2f, 0f, 0f));
+            created.Add(heal.gameObject);
+
+            heal.Tick(player);
+            Assert.AreEqual(PlayerController.MaxHealth, player.Health);
+            Assert.IsNotNull(heal);
+
+            player.TakeDamage(40);
+            heal.Tick(player);
+            Assert.AreEqual(PlayerController.MaxHealth, player.Health);
+        }
+
+        [Test]
         public void LevelUp_ZeroesXp_DoublesGoal_AndIgnoresSecondApply()
         {
             GameManager gm = EnsureManager();
@@ -278,6 +294,17 @@ namespace NeonSurvivor.Tests
             Assert.IsFalse(gm.IsChoosingUpgrade);
             Assert.AreEqual(0, gm.CurrentXp);
             Assert.IsNull(gm.PendingChoices);
+        }
+
+        [Test]
+        public void Player_KeepsDriftingWhenThePointerIsUp()
+        {
+            PlayerController player = CreatePlayer(Vector3.zero);
+            player.ApplyMotion(1f, false, Vector2.zero);
+            Assert.AreEqual(PlayerController.CruiseSpeed, player.transform.position.y, 0.001f);
+            Vector3 coasting = player.transform.position;
+            player.ApplyMotion(0.5f, false, Vector2.zero);
+            Assert.Greater(player.transform.position.y, coasting.y);
         }
 
         static void AssertUp(Vector2 direction, Vector2 expected)

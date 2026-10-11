@@ -15,20 +15,12 @@ namespace NeonSurvivor
             public bool far;
         }
 
-        struct Cloud
-        {
-            public Transform tf;
-            public SpriteRenderer sr;
-            public Vector2 drift;
-            public Color color;
-        }
-
         static readonly System.Random Rng = new System.Random(771);
 
         Dust[] dust;
-        Cloud[] clouds;
         Transform planet;
         Transform moon;
+        Transform nebula;
         Vector2 planetDrift;
         Vector2 moonDrift;
         SpriteRenderer starfield;
@@ -64,7 +56,7 @@ namespace NeonSurvivor
 
             booted = true;
             BuildDust();
-            BuildClouds(starTint);
+            BuildNebula();
             BuildBodies(starTint);
             starfield = FindRenderer("Starfield");
             brightStars = FindRenderer("StarBright");
@@ -102,10 +94,9 @@ namespace NeonSurvivor
             Vector2 velocity = (anchor - lastAnchor) / dt;
             lastAnchor = anchor;
             TickDust(anchor, velocity, dt);
-            TickClouds(anchor, dt);
             TickBody(planet, ref planetDrift, anchor, dt, 7.5f);
             TickBody(moon, ref moonDrift, anchor, dt, 6f);
-            TickStars();
+            TickBackdrop(anchor);
             TickShooter(anchor, dt);
         }
 
@@ -142,43 +133,29 @@ namespace NeonSurvivor
             }
         }
 
-        void BuildClouds(Color starTint)
+        void BuildNebula()
         {
-            clouds = new Cloud[3];
-            Color[] palette =
-            {
-                new Color(0.7f, 0.22f, 1.15f, 0.22f),
-                new Color(0.18f, 0.55f, 1.2f, 0.18f),
-                new Color(1.05f, 0.22f, 0.55f, 0.16f)
-            };
-            for (int i = 0; i < clouds.Length; i++)
-            {
-                GameObject go = new GameObject("Nebula");
-                go.transform.SetParent(transform, false);
-                SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
-                sr.sprite = NeonVisuals.Orb;
-                sr.sharedMaterial = NeonVisuals.GlowMaterial;
-                sr.sortingOrder = -46;
-                Color color = Color.Lerp(palette[i], starTint, 0.25f);
-                color.a = palette[i].a;
-                sr.color = color;
-                float scale = Mathf.Lerp(9f, 15f, Next());
-                go.transform.localScale = Vector3.one * scale;
-                go.transform.position = anchorOrZero() + (Vector3)(RandomDir() * Mathf.Lerp(4f, 12f, Next()));
-                clouds[i].tf = go.transform;
-                clouds[i].sr = sr;
-                clouds[i].drift = RandomDir() * Mathf.Lerp(0.08f, 0.22f, Next());
-                clouds[i].color = color;
-            }
+            GameObject go = new GameObject("Nebula");
+            go.transform.SetParent(transform, false);
+            SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = NeonVisuals.Nebula;
+            Shader shader = Shader.Find("Sprites/Default");
+            if (shader != null)
+                sr.sharedMaterial = new Material(shader);
+            sr.sortingOrder = -48;
+            sr.color = new Color(1f, 1f, 1f, 0.85f);
+            go.transform.localScale = Vector3.one * 5.5f;
+            go.transform.position = anchorOrZero();
+            nebula = go.transform;
         }
 
         void BuildBodies(Color starTint)
         {
             float spin = Next() > 0.5f ? 1f : -1f;
-            planet = MakeBody("Planet", 4.6f, Color.Lerp(new Color(0.62f, 0.2f, 0.82f, 1f), starTint, 0.2f), -44);
-            moon = MakeBody("Moon", 1.7f, Color.Lerp(new Color(0.22f, 0.48f, 0.78f, 1f), starTint, 0.2f), -44);
-            planet.position = anchorOrZero() + new Vector3(9f, 3.5f, 0f);
-            moon.position = anchorOrZero() + new Vector3(-7f, -4f, 0f);
+            planet = MakeBody("Planet", 4.2f, Color.Lerp(new Color(0.42f, 0.22f, 0.62f, 1f), starTint, 0.15f), -45);
+            moon = MakeBody("Moon", 1.5f, Color.Lerp(new Color(0.55f, 0.62f, 0.72f, 1f), starTint, 0.1f), -45);
+            planet.position = anchorOrZero() + new Vector3(5.2f, 9.5f, 0f);
+            moon.position = anchorOrZero() + new Vector3(-4.5f, -9f, 0f);
             planetDrift = new Vector2(-0.08f * spin, 0.03f);
             moonDrift = new Vector2(0.1f * spin, -0.04f);
         }
@@ -186,14 +163,15 @@ namespace NeonSurvivor
         Transform MakeBody(string name, float scale, Color color, int sorting)
         {
             color.a = 1f;
-            GameObject go = NeonFactory.CreateActor(
-                name,
-                NeonVisuals.Circle,
-                NeonVisuals.BodyMaterial,
-                NeonVisuals.GlowMaterial,
-                Vector3.one * scale,
-                sorting);
-            NeonFactory.Tint(go, color);
+            GameObject go = new GameObject(name);
+            SpriteRenderer body = go.AddComponent<SpriteRenderer>();
+            body.sprite = NeonVisuals.MakeSprite(NeonVisuals.PlanetTexture(128, color));
+            Shader shader = Shader.Find("Sprites/Default");
+            if (shader != null)
+                body.sharedMaterial = new Material(shader);
+            body.sortingOrder = sorting;
+            body.color = Color.white;
+            go.transform.localScale = Vector3.one * scale;
             go.transform.SetParent(transform, true);
             return go.transform;
         }
@@ -231,23 +209,6 @@ namespace NeonSurvivor
             }
         }
 
-        void TickClouds(Vector2 anchor, float dt)
-        {
-            float limit = Mathf.Max(ViewHalfWidth(), ViewHalfHeight()) * 2.4f;
-            for (int i = 0; i < clouds.Length; i++)
-            {
-                Vector2 pos = clouds[i].tf.position;
-                pos += clouds[i].drift * dt;
-                if (Vector2.Distance(pos, anchor) > limit)
-                    pos = anchor + RandomDir() * limit * 0.85f;
-                clouds[i].tf.position = new Vector3(pos.x, pos.y, 0f);
-                clouds[i].tf.Rotate(0f, 0f, 4f * dt);
-                Color color = clouds[i].color;
-                color.a *= 0.82f + 0.18f * Mathf.Sin(Time.unscaledTime * 0.35f + i);
-                clouds[i].sr.color = color;
-            }
-        }
-
         void TickBody(Transform body, ref Vector2 drift, Vector2 anchor, float dt, float limitScale)
         {
             if (body == null)
@@ -262,22 +223,25 @@ namespace NeonSurvivor
             body.Rotate(0f, 0f, 6f * dt);
         }
 
-        void TickStars()
+        void TickBackdrop(Vector2 anchor)
         {
-            float pulse = 0.9f + Mathf.Sin(Time.unscaledTime * 0.8f) * 0.1f;
-            if (starfield != null)
-            {
-                Color color = starfieldColor;
-                color.a *= pulse;
-                starfield.color = color;
-            }
+            float pulse = 0.92f + Mathf.Sin(Time.unscaledTime * 0.8f) * 0.08f;
+            FollowLayer(starfield, anchor, 0.012f, starfieldColor, pulse);
+            FollowLayer(brightStars, anchor, 0.03f, brightColor, 0.85f + Mathf.Sin(Time.unscaledTime * 1.3f + 1.2f) * 0.15f);
+            if (nebula != null)
+                nebula.position = new Vector3(anchor.x, anchor.y, 0f);
+        }
 
-            if (brightStars != null)
-            {
-                Color color = brightColor;
-                color.a *= 0.82f + Mathf.Sin(Time.unscaledTime * 1.3f + 1.2f) * 0.18f;
-                brightStars.color = color;
-            }
+        static void FollowLayer(SpriteRenderer layer, Vector2 anchor, float scroll, Color tint, float pulse)
+        {
+            if (layer == null)
+                return;
+
+            layer.transform.position = new Vector3(anchor.x, anchor.y, 0f);
+            Color color = tint;
+            color.a *= pulse;
+            layer.color = color;
+            layer.material.mainTextureOffset = anchor * scroll;
         }
 
         void TickShooter(Vector2 anchor, float dt)
@@ -308,7 +272,7 @@ namespace NeonSurvivor
         {
             if (cam != null && cam.orthographic)
                 return cam.orthographicSize;
-            return 21f;
+            return 15f;
         }
 
         float ViewHalfWidth()

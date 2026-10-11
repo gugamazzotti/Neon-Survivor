@@ -12,6 +12,7 @@ namespace NeonSurvivor.EditorTools
         const string RestoreName = "webgl-restore.request";
         const string ResultName = "webgl-build.result";
 
+        // Starts a Pages build when Temp/webgl-build.request is present.
         [InitializeOnLoadMethod]
         static void WatchRequest()
         {

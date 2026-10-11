@@ -146,6 +146,8 @@ namespace NeonSurvivor
             transform.localScale = new Vector3(info.Scale, info.Scale, 1f);
             if (body != null)
                 body.sortingOrder = id == EnemyArchetype.Boss ? 8 : id == EnemyArchetype.MiniBoss ? 7 : 5;
+            glowColor = NeonArt.EnemyOutline;
+            NeonArt.Outline(gameObject, NeonArt.EnemyOutline, 1.38f, true);
             if (showBar)
                 EnsureHealthBar();
             RefreshBar();
@@ -392,6 +394,7 @@ namespace NeonSurvivor
                 GameManager.Instance.RegisterKill();
             XPOrb.Spawn(transform.position, xpDrop);
             MagnetPickup.TryDrop(transform.position, weight);
+            HealthPickup.TryDrop(transform.position, weight);
             NeonDespawn.Now(gameObject);
         }
 

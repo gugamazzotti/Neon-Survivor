@@ -4,7 +4,7 @@ namespace NeonSurvivor
 {
     public static class SaveProfile
     {
-        const string Prefix = "neon.v1.";
+        public const string Prefix = "neon.v1.";
 
         public static int BestScore(int map)
         {
@@ -87,6 +87,28 @@ namespace NeonSurvivor
             }
 
             return changed;
+        }
+
+        public static int Coins
+        {
+            get { return PlayerPrefs.GetInt(Prefix + "coins", 0); }
+        }
+
+        public static void AddCoins(int amount)
+        {
+            if (!Application.isPlaying || amount <= 0)
+                return;
+            PlayerPrefs.SetInt(Prefix + "coins", Coins + amount);
+            PlayerPrefs.Save();
+        }
+
+        public static bool TrySpend(int amount)
+        {
+            if (!Application.isPlaying || amount <= 0 || Coins < amount)
+                return false;
+            PlayerPrefs.SetInt(Prefix + "coins", Coins - amount);
+            PlayerPrefs.Save();
+            return true;
         }
 
         public static bool TryUnlock(string achievementId)

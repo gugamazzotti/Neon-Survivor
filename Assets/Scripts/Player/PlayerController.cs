@@ -6,6 +6,7 @@ namespace NeonSurvivor
     {
         public const int MaxHealth = 100;
         public const float InvulnDuration = 0.35f;
+        public const float CruiseSpeed = 1.8f;
 
         public static PlayerController Instance
         {
@@ -85,6 +86,14 @@ namespace NeonSurvivor
             SpaceFx.PlayerHurt(transform.position);
         }
 
+        public void RestoreFullHealth()
+        {
+            if (IsDead)
+                return;
+
+            health = MaxHealth;
+        }
+
         void Update()
         {
             if (invulnTimer > 0f)
@@ -95,19 +104,48 @@ namespace NeonSurvivor
             if (IsDead)
                 return;
 
-            if (!TryReadPointer(out Vector3 screen))
-                return;
+            bool steering = TryReadPointer(out Vector3 screen);
+            Vector2 target = transform.position;
+            if (steering)
+            {
+                Camera cam = Camera.main;
+                if (cam == null)
+                    steering = false;
+                else
+                    target = PointerToWorld(cam, screen);
+            }
 
-            Camera cam = Camera.main;
-            if (cam == null)
+            ApplyMotion(Time.deltaTime, steering, target);
+        }
+
+        public void ApplyMotion(float dt, bool steering, Vector2 steerTarget)
+        {
+            if (IsDead)
                 return;
 
             Vector2 current = transform.position;
-            Vector2 target = PointerToWorld(cam, screen);
-            float t = Mathf.Clamp01(followSharpness * Time.deltaTime);
-            Vector2 next = Vector2.Lerp(current, target, t);
-            transform.position = new Vector3(next.x, next.y, 0f);
-            Face(next - current);
+            if (steering)
+            {
+                float t = Mathf.Clamp01(followSharpness * dt);
+                Vector2 next = Vector2.Lerp(current, steerTarget, t);
+                transform.position = new Vector3(next.x, next.y, 0f);
+                Face(next - current);
+                return;
+            }
+
+            Vector2 step = Forward * CruiseSpeed * dt;
+            transform.position = new Vector3(current.x + step.x, current.y + step.y, 0f);
+        }
+
+        public Vector2 Forward
+        {
+            get
+            {
+                Vector2 forward = transform.up;
+                if (forward.sqrMagnitude < 0.0001f)
+                    return Vector2.up;
+                return forward.normalized;
+            }
         }
 
         void Face(Vector2 delta)
