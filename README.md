@@ -1,99 +1,99 @@
 # Neon Survivor
 
-A nave não para. O enxame também não.
+The ship does not stop. Neither does the swarm.
 
-Neon Survivor é um jogo de sobrevivência em retrato, no espírito de *Vampire Survivors*: você segura o ponteiro para manobrar, a nave atira sozinha no inimigo mais próximo e cada abate deixa experiência no vazio. A partida cresce até o casco ceder. Entre uma run e outra, moedas viram naves novas, recordes abrem mapas mais densos e conquistas ficam no hangar.
+Neon Survivor is a portrait survival game in the spirit of *Vampire Survivors*. Hold the pointer to steer, the ship fires on its own at the nearest enemy, and every kill leaves experience in the void. The run keeps growing until the hull gives out. Between runs, coins become new ships, best scores open denser maps, and achievements stay in the hangar.
 
-Jogue no navegador: **[gugamazzotti.github.io/Neon-Survivor](https://gugamazzotti.github.io/Neon-Survivor/)**
+Play in the browser: **[gugamazzotti.github.io/Neon-Survivor](https://gugamazzotti.github.io/Neon-Survivor/)**
 
-O jogo detecta o idioma do sistema. Português e inglês têm menu, HUD, mapas, naves e conquistas.
+The game follows the system language. Portuguese and English both cover the menu, HUD, maps, ships, and achievements.
 
-## Como pilotar
+## How to fly
 
-A tela é vertical. A câmera fica perto da ação para dar para ler o que está vindo.
+The screen is vertical. The camera stays close so you can read what is coming.
 
-- Segure o mouse ou o dedo e a nave desliza até o ponteiro.
-- Solte e ela continua em frente, devagar. Ela nunca fica parada.
-- O tiro é automático e mira o inimigo mais próximo.
-- Subir de nível pausa a run e oferece três melhorias embaralhadas. Escolha uma.
-- A pontuação da partida é a experiência coletada. Cada orbe vale 10.
+- Hold the mouse or a finger and the ship slides toward the pointer.
+- Let go and it keeps drifting forward, slowly. It never sits still.
+- Fire is automatic and aims at the nearest enemy.
+- Leveling up pauses the run and offers three shuffled upgrades. Pick one.
+- The run score is the experience you collect. Each orb is worth 10.
 
-Cores para não confundir o tiroteio:
+Colors so the firefight stays readable:
 
-| O que você vê | O que significa |
+| What you see | What it means |
 | --- | --- |
-| Contorno vermelho | Inimigo |
-| Contorno amarelo | Coletável |
-| Raio verde-amarelo | Tiro da nave |
-| Raio vermelho | Tiro inimigo |
+| Red outline | Enemy |
+| Yellow outline | Pickup |
+| Green-yellow bolt | Your shot |
+| Red bolt | Enemy shot |
 
-## O que cai no espaço
+## What falls in space
 
-| Item | Efeito |
+| Item | Effect |
 | --- | --- |
-| Orbe de XP | Fica onde o inimigo caiu. Só vem até você de perto, ou quando um ímã está ativo. |
-| Ímã | Puxa os orbes de qualquer distância por um tempo. Chefes e subchefes soltam com mais frequência. |
-| Moeda | Vale 1. Aparece pelo cenário e entra direto no hangar. |
-| Cruz verde | Restaura todo o HP. Surge de tempos em tempos, sempre no máximo uma no mapa. Se o casco já está cheio, ela espera. Chefes sempre deixam uma; subchefes, às vezes. |
+| XP orb | Stays where the enemy died. It only comes to you up close, or while a magnet is active. |
+| Magnet | Pulls orbs from any distance for a while. Bosses and mini-bosses drop one more often. |
+| Coin | Worth 1. Spawns around the arena and goes straight to the hangar. |
+| Green cross | Restores all HP. Shows up from time to time, one on the map at most. If the hull is already full, it waits. Bosses always drop one; mini-bosses sometimes do. |
 
-## Três mapas
+## Three maps
 
-Cada mapa lembra o recorde do anterior.
+Each map remembers the best score on the one before it.
 
-| Mapa | Para entrar | Clima |
+| Map | To enter | Mood |
 | --- | --- | --- |
-| Deriva | Aberto | Os arredores neon. O enxame ainda dá tempo de respirar. |
-| Pulso | 400 pontos em Deriva | Nasce mais rápido e os inimigos andam mais. |
-| Núcleo | 900 pontos em Pulso | O coração magenta. Intervalo curto e velocidade alta. |
+| Drift | Open | The neon outskirts. The swarm still leaves room to breathe. |
+| Pulse | 400 points on Drift | Spawns come faster and enemies move harder. |
+| Core | 900 points on Pulse | The magenta heart. Short intervals and high speed. |
 
 ## Hangar
 
-A nave inicial é a Vértice. As outras se compram com moedas achadas na run. A escolha fica salva e entra na próxima partida.
+The starter ship is Vertex. The others are bought with coins found in a run. The choice is saved and used on the next flight.
 
-| Nave | Preço | Jeito |
+| Ship | Price | Look |
 | --- | --- | --- |
-| Vértice | Grátis | A caça de patrulha. |
-| Lâmina | 24 | Nariz longo de dardo. |
-| Bastião | 60 | Casco largo e blindado. |
-| Cometa | 110 | Asas em foice. |
+| Vertex | Free | The patrol fighter. |
+| Blade | 24 | A long dart nose. |
+| Bastion | 60 | A wide armored hull. |
+| Comet | 110 | Swept crescent wings. |
 
-## Melhorias
+## Upgrades
 
-No nível, três cartas. Dá para pegar de novo e evoluir. As três primeiras, juntas na mesma run, fecham a conquista Arsenal.
+On each level, three cards. You can pick the same one again and evolve it. Taking the first three in a single run completes the Arsenal achievement.
 
-- **Cadência.** Menos tempo entre os tiros.
-- **Tiro múltiplo.** Mais um projétil em arco.
-- **Projétil rápido.** O tiro fica mais veloz.
-- **Escudo.** Bloqueia um golpe e recarrega. Evolui para aguentar mais e voltar antes.
-- **Pulso.** Uma onda de dano sai da nave. Evolui em alcance e ritmo.
-- **Orbes.** Dois orbes giram e ferem ao toque. Evolui em quantidade e dano.
-- **Míssil.** O impacto deixa uma área de dano. Evolui em número e tamanho.
+- **Fire rate.** Less time between shots.
+- **Multishot.** One more projectile in an arc.
+- **Fast projectile.** Shots travel faster.
+- **Shield.** Blocks a hit, then recharges. Later ranks take more hits and come back sooner.
+- **Pulse.** A damage wave expands from the ship. Later ranks reach farther and fire more often.
+- **Orbs.** Two orbs spin and hurt on touch. Later ranks add orbs and damage.
+- **Missile.** The impact leaves a damaging area. Later ranks fire more missiles over a larger area.
 
-## Quem persegue
+## Who is chasing you
 
-Oito silhuetas, todas com o contorno vermelho. Há quem corra em linha reta, quem seja lento e duro, quem atire de longe, quem ziguezagueie, quem dispare uma investida, e os dois grandes: subchefe em órbita e chefe com rajada.
+Eight silhouettes, all with a red outline. Some run straight at you, some are slow and tough, some shoot from a distance, some weave, some charge, and two are larger: a mini-boss in orbit and a boss that fires a burst.
 
-Encostar dói. Alguns tiros inimigos também. O HP aparece na barra de cima do HUD, dentro da moldura neon.
+Touching them hurts. Some enemy shots do too. HP sits in the top bar of the HUD, inside the neon frame.
 
-## Conquistas
+## Achievements
 
-Ficam no menu e disparam um aviso no meio da run.
+They live in the menu and pop a notice during the run.
 
-- Primeiro contato: destrua um inimigo.
-- Caçador: 25 inimigos em uma partida.
-- Exterminador: 100 inimigos no total.
-- Ascensão: alcance o nível 5.
-- Piloto: 400 pontos em uma run.
-- Veterano: 900 pontos em uma run.
-- Explorador: abra Pulso.
-- Cartógrafo: abra Núcleo.
-- Arsenal: escolha cadência, tiro múltiplo e projétil rápido na mesma partida.
-- Resistência: sobreviva 90 segundos.
+- First contact: destroy an enemy.
+- Hunter: destroy 25 enemies in one run.
+- Exterminator: destroy 100 enemies in total.
+- Ascent: reach level 5.
+- Pilot: score 400 points in one run.
+- Veteran: score 900 points in one run.
+- Explorer: unlock Pulse.
+- Cartographer: unlock Core.
+- Arsenal: pick fire rate, multishot, and fast projectile in the same run.
+- Endurance: survive for 90 seconds.
 
-## Abrir o projeto
+## Open the project
 
-Unity **2022.3**. Abra a pasta do repositório, deixe a cena `MainMenu` carregar e aperte Play. O menu monta a interface na hora. Jogar entra na arena.
+Unity **2022.3**. Open the repository folder, let the `MainMenu` scene load, and press Play. The menu builds its interface at runtime. Play drops you into the arena.
 
-O combate não usa física da engine: movimento, tiro e coleta são distância e direção. O visual é neon sobre um campo de estrelas, com bloom.
+Combat does not use the engine physics system. Movement, shots, and pickups are distance and direction. The look is neon over a starfield, with bloom.
 
-A build de navegador fica em `docs/` e é a que o GitHub Pages publica. Dentro do editor, o atalho é **Neon Survivor → Build WebGL Pages**.
+The browser build lives in `docs/`, and that folder is what GitHub Pages publishes. In the editor, the shortcut is **Neon Survivor → Build WebGL Pages**.
