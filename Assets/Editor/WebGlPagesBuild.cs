@@ -66,11 +66,8 @@ namespace NeonSurvivor.EditorTools
             string output = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "docs"));
             try
             {
-                PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
-                PlayerSettings.WebGL.decompressionFallback = true;
-                PlayerSettings.WebGL.initialMemorySize = 128;
-                PlayerSettings.WebGL.nameFilesAsHashes = true;
-                PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.ExplicitlyThrownExceptionsOnly;
+                ApplyWebGlSettings();
+                IncludeNeonShaders();
                 if (Directory.Exists(output))
                     Directory.Delete(output, true);
 
@@ -106,6 +103,153 @@ namespace NeonSurvivor.EditorTools
             {
                 RestoreEditorTarget(restorePath);
             }
+        }
+
+        // Ponto de entrada do GameCI. Grava o WebGL fora de docs/
+        // para o site publicado na raiz continuar intacto.
+        public static void BuildPreview()
+        {
+            try
+            {
+                string output = ReadArg("-buildOutput");
+                if (string.IsNullOrEmpty(output))
+                    output = Path.Combine("build", "WebGL");
+                output = Path.GetFullPath(output);
+                if (WouldReplaceLiveSite(output))
+                    throw new InvalidOperationException("O preview não pode substituir o site publicado em docs.");
+
+                EnsureWebGlTarget();
+                ApplyWebGlSettings();
+                IncludeNeonShaders();
+                if (Directory.Exists(output))
+                    Directory.Delete(output, true);
+
+                BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+                {
+                    scenes = new[]
+                    {
+                        "Assets/Scenes/MainMenu.unity",
+                        "Assets/Scenes/SampleScene.unity"
+                    },
+                    locationPathName = output,
+                    target = BuildTarget.WebGL,
+                    options = BuildOptions.None
+                });
+
+                if (report.summary.result != BuildResult.Succeeded)
+                    throw new InvalidOperationException("WebGL preview falhou: " + report.summary.result + " errors=" + report.summary.totalErrors);
+
+                File.WriteAllText(Path.Combine(output, ".nojekyll"), string.Empty);
+                Debug.Log("Neon Survivor WebGL preview pronta em " + output + " bytes=" + report.summary.totalSize);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                EditorApplication.Exit(1);
+                throw;
+            }
+        }
+
+        static void ApplyWebGlSettings()
+        {
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
+            PlayerSettings.WebGL.decompressionFallback = true;
+            PlayerSettings.WebGL.initialMemorySize = 128;
+            PlayerSettings.WebGL.nameFilesAsHashes = true;
+            PlayerSettings.WebGL.exceptionSupport = WebGLExceptionSupport.ExplicitlyThrownExceptionsOnly;
+            PlayerSettings.SetManagedStrippingLevel(BuildTargetGroup.WebGL, ManagedStrippingLevel.Low);
+        }
+
+        static void EnsureWebGlTarget()
+        {
+            if (EditorUserBuildSettings.activeBuildTarget == BuildTarget.WebGL)
+                return;
+
+            bool switched = EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTargetGroup.WebGL, BuildTarget.WebGL);
+            if (!switched && EditorUserBuildSettings.activeBuildTarget != BuildTarget.WebGL)
+                throw new InvalidOperationException("Não foi possível trocar o alvo para WebGL.");
+        }
+
+        static void IncludeNeonShaders()
+        {
+            Shader[] required =
+            {
+                Shader.Find("Neon/SpriteUnlit"),
+                Shader.Find("Neon/SpriteAdditive"),
+                Shader.Find("Sprites/Default"),
+                Shader.Find("Particles/Additive"),
+                Shader.Find("UI/Default")
+            };
+
+            UnityEngine.Object[] assets = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset");
+            if (assets == null || assets.Length == 0)
+                return;
+
+            SerializedObject serialized = new SerializedObject(assets[0]);
+            SerializedProperty array = serialized.FindProperty("m_AlwaysIncludedShaders");
+            if (array == null || !array.isArray)
+                return;
+
+            bool changed = false;
+            for (int i = 0; i < required.Length; i++)
+            {
+                Shader shader = required[i];
+                if (shader == null)
+                {
+                    Debug.LogWarning("Neon Survivor WebGL: shader obrigatório ausente no índice " + i + ".");
+                    continue;
+                }
+
+                bool found = false;
+                for (int slot = 0; slot < array.arraySize; slot++)
+                {
+                    if (array.GetArrayElementAtIndex(slot).objectReferenceValue == shader)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (found)
+                    continue;
+
+                int index = array.arraySize;
+                array.InsertArrayElementAtIndex(index);
+                array.GetArrayElementAtIndex(index).objectReferenceValue = shader;
+                changed = true;
+                Debug.Log("Neon Survivor WebGL: shader mantido no build " + shader.name);
+            }
+
+            if (changed)
+                serialized.ApplyModifiedProperties();
+        }
+
+        static string ReadArg(string name)
+        {
+            string[] args = System.Environment.GetCommandLineArgs();
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (args[i] == name)
+                    return args[i + 1];
+            }
+
+            return null;
+        }
+
+        static bool WouldReplaceLiveSite(string fullPath)
+        {
+            string docs = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "docs"));
+            string preview = Path.GetFullPath(Path.Combine(docs, "preview"));
+            if (string.Equals(fullPath, docs, System.StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            string docsPrefix = docs + Path.DirectorySeparatorChar;
+            string previewPrefix = preview + Path.DirectorySeparatorChar;
+            if (!fullPath.StartsWith(docsPrefix, System.StringComparison.OrdinalIgnoreCase))
+                return false;
+            if (string.Equals(fullPath, preview, System.StringComparison.OrdinalIgnoreCase))
+                return false;
+            return !fullPath.StartsWith(previewPrefix, System.StringComparison.OrdinalIgnoreCase);
         }
 
         static void RestoreEditorTarget(string restorePath)
