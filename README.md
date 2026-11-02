@@ -26,6 +26,7 @@ Colors so the firefight stays readable:
 | Yellow outline | Pickup |
 | Green-yellow bolt | Your shot |
 | Red bolt | Enemy shot |
+| Red tick on the screen edge | An enemy is still outside the view, in that direction. A larger magenta tick is a boss, an orange one a mini-boss. |
 
 ## What falls in space
 

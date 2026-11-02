@@ -193,6 +193,16 @@ namespace NeonSurvivor
             }
 
             hud.EnsureUi();
+            EnsureThreatMarkers();
+        }
+
+        static void EnsureThreatMarkers()
+        {
+            if (FindObjectOfType<ThreatMarkerView>() != null)
+                return;
+
+            GameObject go = new GameObject("ThreatMarkers");
+            go.AddComponent<ThreatMarkerView>();
         }
 
         GameObject Hold(GameObject template)

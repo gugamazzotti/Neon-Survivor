@@ -1,0 +1,113 @@
+name: Preview WebGL
+
+on:
+  push:
+    branches:
+      - "daily/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: webgl-preview-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: WebGL preview
+    runs-on: ubuntu-latest
+    # WebGL shader compiles can stall. This cap stops a runaway variant build
+    # without cutting a normal 2022.3 player short. The build only forces the
+    # already-used neon, sprite, and UI shaders into Always Included Shaders.
+    timeout-minutes: 120
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          df -h
+
+      - uses: actions/checkout@v4
+
+      - name: Require Unity license secrets
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=0
+          if [ -z "${UNITY_LICENSE}" ]; then echo "Missing repository secret UNITY_LICENSE"; missing=1; fi
+          if [ -z "${UNITY_EMAIL}" ]; then echo "Missing repository secret UNITY_EMAIL"; missing=1; fi
+          if [ -z "${UNITY_PASSWORD}" ]; then echo "Missing repository secret UNITY_PASSWORD"; missing=1; fi
+          if [ "${missing}" -ne 0 ]; then
+            echo "GameCI cannot build WebGL until UNITY_LICENSE, UNITY_EMAIL, and UNITY_PASSWORD exist."
+            exit 1
+          fi
+          echo "Unity license secrets are present."
+
+      - name: Build WebGL
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: WebGL
+          unityVersion: 2022.3.33f1
+          buildMethod: NeonSurvivor.EditorTools.WebGlPagesBuild.BuildPreview
+          customParameters: -buildOutput build/WebGL
+          containerRegistryImageVersion: "3"
+
+      - name: Check preview player
+        run: |
+          set -euo pipefail
+          sudo chmod -R a+rX build
+          test -f build/WebGL/index.html
+          test -d build/WebGL/Build
+          grep -q 'buildUrl = "Build"' build/WebGL/index.html
+          echo "Preview player is a relative WebGL build."
+
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: webgl-preview
+          path: build/WebGL
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Publish preview subpath without replacing the live site
+        env:
+          PREVIEW_DIR: docs/preview/daily/2026-10-29-threat-markers
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          rm -rf /tmp/pages-main
+          git worktree add --detach /tmp/pages-main origin/main
+          cp /tmp/pages-main/docs/index.html /tmp/live-index.html
+          test -f /tmp/pages-main/docs/Build/9853637125e801e9aae48e78dbbdcfca.loader.js || test -d /tmp/pages-main/docs/Build
+          rm -rf "/tmp/pages-main/${PREVIEW_DIR}"
+          mkdir -p "/tmp/pages-main/${PREVIEW_DIR}"
+          cp -a build/WebGL/. "/tmp/pages-main/${PREVIEW_DIR}/"
+          cmp /tmp/live-index.html /tmp/pages-main/docs/index.html
+          git -C /tmp/pages-main diff --exit-code -- docs/index.html docs/Build docs/TemplateData docs/.nojekyll
+          git -C /tmp/pages-main add -- "${PREVIEW_DIR}"
+          stray=$(git -C /tmp/pages-main diff --cached --name-only | grep -v "^${PREVIEW_DIR}/" || true)
+          if [ -n "${stray}" ]; then
+            echo "Refusing to publish files outside the preview folder:"
+            printf '%s\n' "${stray}"
+            exit 1
+          fi
+          git -C /tmp/pages-main -c user.email="41898282+github-actions[bot]@users.noreply.github.com" -c user.name="github-actions[bot]" commit -m "Publish WebGL preview for daily/2026-10-29-threat-markers."
+          git -C /tmp/pages-main config http.postBuffer 524288000
+          for attempt in 1 2 3; do
+            if git -C /tmp/pages-main push origin HEAD:main; then
+              echo "Preview URL: https://gugamazzotti.github.io/Neon-Survivor/preview/daily/2026-10-29-threat-markers/"
+              exit 0
+            fi
+            echo "Push to main was rejected (attempt ${attempt}). Rebasing the preview commit."
+            git -C /tmp/pages-main fetch origin main
+            git -C /tmp/pages-main rebase origin/main
+          done
+          echo "Could not publish the preview subpath onto main."
+          exit 1
