@@ -77,32 +77,51 @@ jobs:
           retention-days: 7
 
       - name: Publish preview subpath without replacing the live site
-        env:
-          PREVIEW_DIR: docs/preview/daily/2026-10-29-threat-markers
         run: |
           set -euo pipefail
+          branch="${GITHUB_REF_NAME}"
+          case "${branch}" in
+            daily/*) ;;
+            *)
+              echo "Refusing to publish a preview for ref ${branch}."
+              exit 1
+              ;;
+          esac
+          case "${branch}" in
+            *..*)
+              echo "Refusing an unsafe preview path: ${branch}"
+              exit 1
+              ;;
+          esac
+          case "${branch}" in
+            *[[:space:]]*)
+              echo "Refusing an unsafe preview path: ${branch}"
+              exit 1
+              ;;
+          esac
+          preview_dir="docs/preview/${branch}"
           git fetch origin main
           rm -rf /tmp/pages-main
           git worktree add --detach /tmp/pages-main origin/main
           cp /tmp/pages-main/docs/index.html /tmp/live-index.html
           test -f /tmp/pages-main/docs/Build/9853637125e801e9aae48e78dbbdcfca.loader.js || test -d /tmp/pages-main/docs/Build
-          rm -rf "/tmp/pages-main/${PREVIEW_DIR}"
-          mkdir -p "/tmp/pages-main/${PREVIEW_DIR}"
-          cp -a build/WebGL/. "/tmp/pages-main/${PREVIEW_DIR}/"
+          rm -rf "/tmp/pages-main/${preview_dir}"
+          mkdir -p "/tmp/pages-main/${preview_dir}"
+          cp -a build/WebGL/. "/tmp/pages-main/${preview_dir}/"
           cmp /tmp/live-index.html /tmp/pages-main/docs/index.html
           git -C /tmp/pages-main diff --exit-code -- docs/index.html docs/Build docs/TemplateData docs/.nojekyll
-          git -C /tmp/pages-main add -- "${PREVIEW_DIR}"
-          stray=$(git -C /tmp/pages-main diff --cached --name-only | grep -v "^${PREVIEW_DIR}/" || true)
+          git -C /tmp/pages-main add -- "${preview_dir}"
+          stray=$(git -C /tmp/pages-main diff --cached --name-only | grep -v -F "${preview_dir}/" || true)
           if [ -n "${stray}" ]; then
             echo "Refusing to publish files outside the preview folder:"
             printf '%s\n' "${stray}"
             exit 1
           fi
-          git -C /tmp/pages-main -c user.email="41898282+github-actions[bot]@users.noreply.github.com" -c user.name="github-actions[bot]" commit -m "Publish WebGL preview for daily/2026-10-29-threat-markers."
+          git -C /tmp/pages-main -c user.email="41898282+github-actions[bot]@users.noreply.github.com" -c user.name="github-actions[bot]" commit -m "Publish WebGL preview for ${branch}."
           git -C /tmp/pages-main config http.postBuffer 524288000
           for attempt in 1 2 3; do
             if git -C /tmp/pages-main push origin HEAD:main; then
-              echo "Preview URL: https://gugamazzotti.github.io/Neon-Survivor/preview/daily/2026-10-29-threat-markers/"
+              echo "Preview URL: https://gugamazzotti.github.io/Neon-Survivor/preview/${branch}/"
               exit 0
             fi
             echo "Push to main was rejected (attempt ${attempt}). Rebasing the preview commit."

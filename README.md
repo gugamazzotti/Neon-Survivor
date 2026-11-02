@@ -27,6 +27,7 @@ Colors so the firefight stays readable:
 | Green-yellow bolt | Your shot |
 | Red bolt | Enemy shot |
 | Red tick on the screen edge | An enemy is still outside the view, in that direction. A larger magenta tick is a boss, an orange one a mini-boss. |
+| Pulsing red border | The hull is at 30% or below. A single brighter flash means a hit got through. |
 
 ## What falls in space
 
