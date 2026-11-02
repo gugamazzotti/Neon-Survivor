@@ -21,8 +21,14 @@ namespace NeonSurvivor
         [SerializeField] Text gameOverDetail;
         [SerializeField] Text toastText;
         GameObject toastRoot;
+        Image[] hullEdges;
+        Text hullLabel;
+        readonly Color hullCalm = new Color(1f, 0.28f, 0.48f, 1f);
+        readonly Color hullHot = new Color(1f, 0.72f, 0.8f, 1f);
 
         float toastTimer;
+        int seenHealth = -1;
+        float hitFlash;
 
         public void EnsureUi()
         {
@@ -157,8 +163,11 @@ namespace NeonSurvivor
         {
             PlayerController player = PlayerController.Instance;
             GameManager gm = GameManager.Instance;
+            int health = player == null ? 0 : player.Health;
+            bool covered = gm != null && (gm.IsGameOver || gm.IsChoosingUpgrade);
+            ApplyHullAlert(health, player != null && player.IsDead, covered);
             if (healthFill != null)
-                healthFill.fillAmount = player == null ? 0f : (float)player.Health / PlayerController.MaxHealth;
+                healthFill.fillAmount = player == null ? 0f : (float)health / PlayerController.MaxHealth;
             if (levelText != null)
                 levelText.text = Loc.Format("hud.level", gm == null ? 1 : gm.Level);
             if (gm == null)
@@ -178,6 +187,41 @@ namespace NeonSurvivor
 
             if (coinText != null)
                 coinText.text = Loc.Format("hud.coins", SaveProfile.Coins);
+        }
+
+        void ApplyHullAlert(int health, bool dead, bool covered)
+        {
+            float dt = Time.unscaledDeltaTime;
+            if (dt > 0.05f)
+                dt = 0.05f;
+            if (hitFlash > 0f)
+            {
+                hitFlash -= dt / HullAlert.FlashSeconds;
+                if (hitFlash < 0f)
+                    hitFlash = 0f;
+            }
+
+            if (HullAlert.TookAHit(seenHealth, health))
+                hitFlash = 1f;
+            seenHealth = health;
+
+            bool critical = HullAlert.IsCritical(health, PlayerController.MaxHealth, dead, covered);
+            float pulse = HullAlert.Pulse01(Time.unscaledTime, HullAlert.PulsePeriod);
+            float alpha = covered ? 0f : HullAlert.EdgeAlpha(critical, pulse, hitFlash);
+            Color edge = new Color(1f, 0.08f, 0.22f, alpha);
+            if (hullEdges != null)
+            {
+                for (int i = 0; i < hullEdges.Length; i++)
+                {
+                    if (hullEdges[i] != null)
+                        hullEdges[i].color = edge;
+                }
+            }
+
+            if (healthFill != null)
+                healthFill.color = HullAlert.BarColor(hullCalm, hullHot, critical, pulse);
+            if (hullLabel != null && hullLabel.gameObject.activeSelf != critical)
+                hullLabel.gameObject.SetActive(critical);
         }
 
         void ApplyLabels(UpgradeChoice[] choices)
@@ -220,6 +264,7 @@ namespace NeonSurvivor
                 gameObject.AddComponent<GraphicRaycaster>();
 
             EnsureEventSystem();
+            CreateHullEdges();
 
             GameObject plateGo = new GameObject("HudPlate", typeof(RectTransform));
             plateGo.transform.SetParent(transform, false);
@@ -259,7 +304,14 @@ namespace NeonSurvivor
             levelText = CreateText("Level", well, font, 30, FontStyle.Bold, Color.white, TextAnchor.UpperLeft);
             Place(levelText.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -40f), new Vector2(760f, 36f));
 
-            healthFill = CreateBar(well, "Health", new Vector2(8f, -86f), new Vector2(760f, 64f), new Color(1f, 0.28f, 0.48f, 1f));
+            healthFill = CreateBar(well, "Health", new Vector2(8f, -86f), new Vector2(760f, 64f), hullCalm);
+            hullLabel = CreateText("HullAlert", well, font, 22, FontStyle.Bold, new Color(1f, 0.97f, 0.98f, 1f), TextAnchor.MiddleCenter);
+            Place(hullLabel.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(8f, -86f), new Vector2(760f, 64f));
+            hullLabel.text = Loc.Get("hud.hull");
+            Outline hullOutline = hullLabel.gameObject.AddComponent<Outline>();
+            hullOutline.effectColor = new Color(0.18f, 0.02f, 0.06f, 0.95f);
+            hullOutline.effectDistance = new Vector2(1.5f, -1.5f);
+            hullLabel.gameObject.SetActive(false);
             xpFill = CreateBar(well, "XP", new Vector2(8f, -160f), new Vector2(760f, 56f), new Color(0.25f, 0.95f, 1f, 1f));
 
             xpText = CreateText("XpLabel", well, font, 20, FontStyle.Normal, new Color(0.75f, 0.95f, 1f, 0.9f), TextAnchor.UpperLeft);
@@ -403,6 +455,71 @@ namespace NeonSurvivor
         }
 
         static Sprite roundedBar;
+
+        void CreateHullEdges()
+        {
+            hullEdges = new Image[4];
+            hullEdges[0] = CreateEdge("HullLeft", SoftBand(0), new Vector2(0f, 0f), new Vector2(0f, 1f), Vector2.zero, new Vector2(280f, 0f));
+            hullEdges[1] = CreateEdge("HullRight", SoftBand(1), new Vector2(1f, 0f), new Vector2(1f, 1f), new Vector2(-280f, 0f), Vector2.zero);
+            hullEdges[2] = CreateEdge("HullBottom", SoftBand(2), new Vector2(0f, 0f), new Vector2(1f, 0f), Vector2.zero, new Vector2(0f, 340f));
+            hullEdges[3] = CreateEdge("HullTop", SoftBand(3), new Vector2(0f, 1f), new Vector2(1f, 1f), new Vector2(0f, -240f), Vector2.zero);
+        }
+
+        Image CreateEdge(string name, Sprite sprite, Vector2 anchorMin, Vector2 anchorMax, Vector2 offsetMin, Vector2 offsetMax)
+        {
+            GameObject go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(transform, false);
+            Image image = go.AddComponent<Image>();
+            image.sprite = sprite;
+            image.color = new Color(1f, 0.08f, 0.22f, 0f);
+            image.raycastTarget = false;
+            RectTransform rect = image.rectTransform;
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
+            return image;
+        }
+
+        static Sprite[] softBands;
+
+        static Sprite SoftBand(int kind)
+        {
+            if (softBands == null)
+                softBands = new Sprite[4];
+            if (kind < 0 || kind >= softBands.Length)
+                kind = 0;
+            if (softBands[kind] != null)
+                return softBands[kind];
+
+            const int length = 64;
+            const int thin = 4;
+            bool horizontal = kind < 2;
+            bool opaqueAtStart = kind == 0 || kind == 2;
+            int width = horizontal ? length : thin;
+            int height = horizontal ? thin : length;
+            Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            Color32[] pixels = new Color32[width * height];
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    float along = horizontal ? x / (float)(width - 1) : y / (float)(height - 1);
+                    float fade = opaqueAtStart ? 1f - along : along;
+                    fade = fade * fade * (3f - 2f * fade);
+                    byte alpha = (byte)Mathf.RoundToInt(Mathf.Clamp01(fade) * 255f);
+                    pixels[y * width + x] = new Color32(255, 255, 255, alpha);
+                }
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply(false, false);
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.filterMode = FilterMode.Bilinear;
+            softBands[kind] = Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), 100f);
+            softBands[kind].name = "hull-edge-" + kind;
+            return softBands[kind];
+        }
 
         static Image CreateBar(Transform parent, string name, Vector2 position, Vector2 size, Color fillColor)
         {
